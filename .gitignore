@@ -1,0 +1,11 @@
+# Pour LaTeX
+*.aux
+*.bbl
+*.log
+*.out
+*.toc
+*.fls
+*.synctex.gz
+*.fdb_latexmk
+*.pdf
+*.blg
