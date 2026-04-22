@@ -1,0 +1,92 @@
+\documentclass[11pt, a4paper]{article}
+
+% --- Encodage et Langue ---
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[french]{babel} % Adapte la typographie (guillemets, espaces)
+
+% --- Mise en page ---
+\usepackage[margin=2.5cm]{geometry} % Marges équilibrées
+
+% --- Mathématiques ---
+\usepackage{amsmath, amssymb, amsthm}
+
+
+\title{Note de Synthèse}
+\date{}
+
+\begin{document}
+\maketitle
+
+\section{Dixon \& Coles}
+Dans cet article \cite{dixon} Dixon et Coles se proposent d'étudier un modèle de 
+prédiction permettant de prédire avec précision les probabilités 
+de l'issue des matchs de football. 
+Pour décrire le modèle, il faut ce baser sur le modèle de Maher (1982) 
+qui suppose que les buts marqués par les équipes à domicile et à 
+l'extérieur suivent des lois de Poisson indépendantes. 
+D'autres modèles ont pu être proposés; Reep et al(1971) a proposé à l'instar de 
+Moroney(1956) un modèle basé sur la binomiale négative. 
+Cependant cette approche a été abandonnée par la suite ne trouvant 
+aucun moyen de prédire les résultats.
+
+Le modèle de Maher utilise donc une loi Poisson dont la moyenne est 
+modélisée en fonction des performances présentes des équipes respectives.
+Afin d'améliorer et de tester ce modèle, de nombreux papiers traite de différents 
+paramètres, l'exclusion d'un joueur, le fait de jouer à domicile ou à l'extérieur, etc.
+
+
+\subsection{Données}
+
+L'étude s'appuie sur 6 629 résultats de matchs anglais (championnat et coupes) 
+entre 1992 et 1995. Contrairement à d'autres approches plus complexes, les auteurs 
+font le choix délibéré de n'utiliser que les scores finaux, ignorant volontairement 
+des données comme l'identité des buteurs ou le moment des buts pour garantir 
+la robustesse statistique du modèle.
+
+Les données disponibles, qui comprennent $6 629$ résultats de matchs de championnat 
+et de coupe (temps plein) des saisons $1992-1993$, $1993-1994$ et $1994-1995$, incluent 
+pour chaque match le score à domicile et le score à l'extérieur. Les données de 
+$1995-1996$ sont également disponibles, mais servent d'échantillon de validation 
+pour tester l'utilité du modèle lorsqu'il est utilisé comme base pour une stratégie 
+de paris.
+
+\subsection{Modèle de Dixon et Coles}
+
+Dans un premier temps, les auteurs mènenent une analyse empirique des données, 
+en se concentrant sur les résultats à domicile, à l'extérieur et nuls. Ils constatent que 
+l'ajustement d'une distribution de Poisson aux scores agrégés à domicile et à 
+l'extérieur révèle que, quel que soit le critère, le modèle de Poisson correspond 
+presque parfaitement. 
+
+\subsection{Détail du Modèle et inférences}
+
+Afin de développer au mieux leur modèle, les auteurs précisent certains éléments 
+importants :
+\begin{itemize}
+    \item différentes capacités des deux équipes lors d'un match.
+    \item Il convient de tenir compte du fait que les équipes jouant à domicile 
+    bénéficient généralement d'un certain avantage, le fameux « effet terrain ».
+    \item pour estimer la capacité d'une équipe, il est logique de se baser sur 
+    les performances récentes de l'équipe
+    \item Pour mieux détailler les capacités d'une équipe, il est nécessaire de les différencier.
+    L'attaque et la défense.
+    \item Pour résumer les performances d'une équipe à partir de ses résultats récents, 
+    il convient de tenir compte du niveau des équipes qu'elle a affrontées.
+\end{itemize}
+Ils se basent donc sur le modèle de Maher(1982) en apportant certains ajustement afin 
+de pouvoir traiter des données incomplètes, de pouvoir tenir compte de l'évolution 
+des performances des équipes.
+
+
+\section{Leonardo Egidi et Nicola Torelli}
+
+
+\section{Carloni et al.}
+
+
+\newpage
+\nocite{*}
+\bibliographystyle{plain}
+\bibliography{references}
+\end{document}
