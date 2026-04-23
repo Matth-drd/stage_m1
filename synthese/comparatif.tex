@@ -1,0 +1,146 @@
+% \documentclass[11pt, a4paper]{article}
+
+% % --- Encodage et Langue ---
+% \usepackage[utf8]{inputenc}
+% \usepackage[T1]{fontenc}
+% \usepackage[french]{babel}
+
+% % --- Mise en page et Graphismes ---
+% \usepackage[margin=2cm]{geometry}
+% \usepackage{pdflscape} % Pour le tableau en mode paysage
+% \usepackage[table]{xcolor}
+% \usepackage{float}
+% \usepackage{booktabs}
+% \usepackage{array} % Pour personnaliser les colonnes tabular
+% \usepackage{hyperref}
+
+% % --- Mathématiques ---
+% \usepackage{amsmath, amssymb, amsthm}
+
+% % --- Couleurs personnalisées ---
+% \definecolor{headerblue}{RGB}{31, 73, 125}
+% \definecolor{rowgray}{RGB}{242, 242, 242}
+% \definecolor{rowwhite}{RGB}{255, 255, 255}
+
+% \title{\textbf{Note de Synthèse : Modélisation du Football}}
+% \author{Stage M1 - Mathématiques Appliquées}
+% \date{\today}
+
+% \begin{document}
+
+% \maketitle
+% \tableofcontents
+% \newpage
+
+% \section{Dixon \& Coles (1997)}
+% L'article de Dixon et Coles \cite{dixon} est une référence séminale qui adapte le modèle de Maher (1982). Ils utilisent une approche fréquentiste basée sur la \textbf{loi de Poisson} pour estimer les capacités d'attaque et de défense de chaque équipe.
+
+% \subsection{Données et Inflexion}
+% L'étude exploite un historique de 6 629 matchs du championnat anglais (1992-1995). Contrairement aux modèles antérieurs, ils introduisent deux innovations majeures :
+% \begin{itemize}
+%     \item \textbf{La dépendance des scores ($\rho$)} : Correction pour les scores faibles (0-0, 1-1) qui ne suivent pas une loi de Poisson pure.
+%     \item \textbf{Le dynamisme temporel} : Les performances passées sont pondérées pour accorder plus d'importance aux résultats récents.
+% \end{itemize}
+
+% \section{Egidi \& Torelli (2021)}
+% Cet article \cite{egidi} déplace le curseur vers la méthodologie statistique. Ils comparent deux philosophies : prédire le nombre de buts (\textit{Goal-based}) ou prédire l'issue du match (\textit{Result-based}).
+
+% L'approche est ici \textbf{Bayésienne}, utilisant des simulations MCMC pour capturer l'incertitude des paramètres de compétence des équipes, testée sur les données de la Coupe du Monde 2018.
+
+% \section{Carloni et al. (2021)}
+% Le travail de Luca Carloni et son équipe \cite{carloni} représente le versant \textbf{Intelligence Artificielle}. L'objectif n'est plus d'expliquer mathématiquement le jeu, mais de maximiser le \textbf{ROI (Retour sur Investissement)}. Ils utilisent des réseaux de neurones (ANN) entraînés sur une base de données massive issue du web scraping pour battre les cotes des bookmakers.
+
+% \newpage
+
+% % ================================================================
+% % TABLEAU COMPARATIF EN PAYSAGE
+% % ================================================================
+% \begin{landscape}
+% \section{Synthèse comparative des approches}
+
+% \renewcommand{\arraystretch}{1.8}
+% \begin{table}[H]
+% \centering
+% \caption{Grille d'analyse des trois piliers de la littérature étudiée}
+% \small
+% \begin{tabular}{|>{\bfseries}p{3.5cm}|p{6cm}|p{6cm}|p{6cm}|}
+% \hline
+% \rowcolor{headerblue} 
+% \textcolor{white}{Critères} & 
+% \textcolor{white}{Dixon \& Coles (1997)} & 
+% \textcolor{white}{Egidi \& Torelli (2021)} & 
+% \textcolor{white}{Carloni et al. (2021)} \\ \hline
+
+% \rowcolor{rowgray}
+% Approche & Statistique fréquentiste & Statistique Bayésienne & Machine Learning (IA) \\ \hline
+
+% \rowcolor{rowwhite}
+% Modèle principal & Poisson bivarié ajusté & Inférence Bayésienne (MCMC) & Réseaux de neurones (ANN) \\ \hline
+
+% \rowcolor{rowgray}
+% Cible de prédiction & Nombre de buts (HG, AG) & Comparaison Buts vs Issue & Issue du match (1N2) \\ \hline
+
+% \rowcolor{rowwhite}
+% Innovation clé & Dépendance $\rho$ et facteur temporel $\alpha$ & Diagnostic de calibration (Brier Score) & Approche "Data-driven" / ROI \\ \hline
+
+% \rowcolor{rowgray}
+% Points forts & Très interprétable, robuste & Gestion fine de l'incertitude & Capture les relations non-linéaires \\ \hline
+
+% \rowcolor{rowwhite}
+% Points faibles & Ignore le contexte (blessures, etc.) & Calculs lourds (simulations) & Effet "Boîte noire" \\ \hline
+% \end{tabular}
+% \end{table}
+% \end{landscape}
+
+% \newpage
+% \nocite{*}
+% \bibliographystyle{plain}
+% \bibliography{references}
+
+% \end{document}
+
+
+
+\documentclass{article}
+\usepackage{lscape} % Pour mettre le tableau en paysage
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[french]{babel}
+\usepackage{array,multirow,makecell}
+\setcellgapes{1pt}
+\makegapedcells
+\newcolumntype{R}[1]{>{\raggedleft\arraybackslash }b{#1}}
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash }b{#1}}
+\newcolumntype{C}[1]{>{\centering\arraybackslash }b{#1}}
+
+\begin{document}
+
+% \begin{tabular}{|R{2cm}||C{2cm}|C{2cm}|C{2cm}|}
+% \hline  & Dixon et Coles &  Egidi et Torelli &  Carloni et al.  \\
+% \hline type de données & xx & xx & xx  \\
+% \hline hypothèses mathématiques & xx & xx & xx \\
+% \hline métriques d'évaluation & xx & xx & xx  \\
+% \hline
+% \end{tabular}
+\begin{landscape}
+
+\begin{tabular}{|L{2cm}||C{5cm}|C{5cm}|C{5cm}|} 
+    \hline  & \textbf{Dixon et Coles} &  \textbf{Egidi et Torelli} &  \textbf{Carloni et al.}  \\
+    \hline \textbf{Type de données} & Résultats historiques de 6 629 matchs (scores) de la ligue et coupes anglaises (1992-1995) 
+    & matchs de la Coupe du Monde FIFA 2018, incluant les classements FIFA et les cotes de bookmakers
+    & Données scrapées de 49 319 matchs (12 pays, 2008-2020) incluant les cotes de paris (1X2, Over-Under) \\
+    \hline \textbf{Hypothèses mathématiques} & Lois de Poisson pour les buts avec paramètres attaque/défense, 
+    correction de dépendance ($\tau$) pour les petits scores et pondération temporelle ($\Phi$)
+    & Cadre bayésien comparant des modèles multinomiaux (résultats) et des modèles de Poisson (buts) basés sur le différentiel de classement FIFA
+    & Utilisation d'algorithmes de Machine Learning (SVM, Random Forest) avec une priorité donnée au Réseau de Neurones Artificiels (ANN) \\
+    \hline \textbf{Métriques d'évaluation} & Profitabilité et retour positif d'une stratégie de paris, ainsi 
+    que la vraisemblance prédictive 
+    & Pseudo-$R^2$ , Brier Score (erreur quadratique moyenne) et Leave-One-Out Cross Validation (LOOIC)
+    & Précision de la prédiction (Accuracy) et Retour sur Investissement (ROI/RSI) \\ 
+    \hline 
+\end{tabular}
+
+\end{landscape}
+
+
+\end{document}
