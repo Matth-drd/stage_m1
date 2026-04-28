@@ -3,7 +3,7 @@ import numpy as np
 
 # Remarque : Dans le code, T représente les équipes T = H ou A
 
-T = 5  # nb match pour calculer la forme récente de l'équipe
+nb_match = 5  # nb match pour calculer la forme récente de l'équipe
 weight_g = 1.5  # Poids pour les buts dans l'indicateur de précision pondéré
 elo_init = 1500  # score elo avant le premier match pour toutes les équipes
 
@@ -18,25 +18,30 @@ df = df.sort_values(by='Date').reset_index(drop=True)
 ########### forme récente /force d'attaque / force de défense / Attaque sur la saison / défense sur la saison  ############
 ################## HOME
 """ 
-plus Tdef est faible plus l'équipe T a une défense solide
+plus Tdef est faible plus l'équipe T a une défense solide.
+Apparition de Nan dans les colonnes créées. Je traite cela à la fin du code.
+Les Nan apparaissent pour le 1er match de chaque équipe car les calculs sont effectués 
+sur les matchs précédents en excluant le match en cours.
 """
 
-df["Hforme"] = df.groupby('HomeTeam')['FTHG'].rolling(T, min_periods=1, closed='left').mean().reset_index(level=0,
-                                                                                                          drop=True)
-df["Hatt"] = df.groupby('HomeTeam')['HS'].rolling(T, min_periods=1, closed='left').mean().reset_index(level=0,
-                                                                                                      drop=True)
-df["Hdef"] = df.groupby('HomeTeam')['AS'].rolling(T, min_periods=1, closed='left').mean().reset_index(level=0,
-                                                                                                      drop=True)
+df["Hforme"] = df.groupby('HomeTeam')['FTHG'].rolling(nb_match, min_periods=1, closed='left').mean().reset_index(
+    level=0,
+    drop=True)
+df["Hatt"] = df.groupby('HomeTeam')['HS'].rolling(nb_match, min_periods=1, closed='left').mean().reset_index(level=0,
+                                                                                                             drop=True)
+df["Hdef"] = df.groupby('HomeTeam')['AS'].rolling(nb_match, min_periods=1, closed='left').mean().reset_index(level=0,
+                                                                                                             drop=True)
 
 # On normalise les données par saisons afin d'avoir la force d'attaque d'une équipe
 # par rapport à la force d'attaque des équipes sur toute la saison.
 avg_h_g_league = df.groupby(["League", "Season"])['FTHG'].transform('mean')
 df['Hatt_sais'] = df['Hforme'] / (avg_h_g_league + 0.001)
 
-h_conceded_fr = df.groupby('HomeTeam')['FTAG'].rolling(T, min_periods=1, closed='left').mean().reset_index(level=0,
-                                                                                                           drop=True)
+h_conceded_g = df.groupby('HomeTeam')['FTAG'].rolling(nb_match, min_periods=1, closed='left').mean().reset_index(
+    level=0,
+    drop=True)
 avg_h_e_league = df.groupby(["League", "Season"])['FTAG'].transform('mean')
-df['Hdef_sais'] = h_conceded_fr / (avg_h_e_league + 0.001)
+df['Hdef_sais'] = h_conceded_g / (avg_h_e_league + 0.001)
 
 print(df.head(5))
 
@@ -46,22 +51,24 @@ Calcul des statistiques pour l'équipe à l'extérieur.
 Note : Adef utilise bien AwayTeam et les tirs de l'équipe à domicile (HS).
 """
 
-df["Aforme"] = df.groupby('AwayTeam')['FTAG'].rolling(T, min_periods=1, closed='left').mean().reset_index(level=0,
-                                                                                                          drop=True)
-df["Aatt"] = df.groupby('AwayTeam')['AS'].rolling(T, min_periods=1, closed='left').mean().reset_index(level=0,
-                                                                                                      drop=True)
-df["Adef"] = df.groupby('AwayTeam')['HS'].rolling(T, min_periods=1, closed='left').mean().reset_index(level=0,
-                                                                                                      drop=True)
+df["Aforme"] = df.groupby('AwayTeam')['FTAG'].rolling(nb_match, min_periods=1, closed='left').mean().reset_index(
+    level=0,
+    drop=True)
+df["Aatt"] = df.groupby('AwayTeam')['AS'].rolling(nb_match, min_periods=1, closed='left').mean().reset_index(level=0,
+                                                                                                             drop=True)
+df["Adef"] = df.groupby('AwayTeam')['HS'].rolling(nb_match, min_periods=1, closed='left').mean().reset_index(level=0,
+                                                                                                             drop=True)
 
 # Normalisation par saisons
 avg_a_g_league = df.groupby(["League", "Season"])['FTAG'].transform('mean')
 df['Aatt_sais'] = df['Aforme'] / (
         avg_a_g_league + 0.001)  # forme récente de l'équipe / moyenne de buts marqués à l'extérieur dans la ligue
 
-a_conceded_fr = df.groupby('AwayTeam')['FTHG'].rolling(T, min_periods=1, closed='left').mean().reset_index(level=0,
-                                                                                                           drop=True)
+a_conceded_g = df.groupby('AwayTeam')['FTHG'].rolling(nb_match, min_periods=1, closed='left').mean().reset_index(
+    level=0,
+    drop=True)
 avg_a_e_league = df.groupby(["League", "Season"])['FTHG'].transform('mean')
-df['Adef_sais'] = a_conceded_fr / (avg_a_e_league + 0.001)
+df['Adef_sais'] = a_conceded_g / (avg_a_e_league + 0.001)
 
 print(df.head(5))
 
@@ -88,7 +95,7 @@ for index, row in df.iterrows():
             diff = (date - last_match_date[team]).days
             list_repos.append(min(diff, 25))
         else:
-            list_repos.append(15)  # Valeur neutre par défaut
+            list_repos.append(30)  # Valeur par défaut pour le 1er match
 
     last_match_date[h_team] = date
     last_match_date[a_team] = date
@@ -100,12 +107,12 @@ df['HRepos'], df['ARepos'] = h_repos, a_repos
 Indicateurs de précision : nb_tir_cadré / nb_tir.
 """
 
-hst_rolling = df.groupby('HomeTeam')['HST'].rolling(T, min_periods=1, closed='left').mean().reset_index(level=0,
-                                                                                                        drop=True)
+hst_rolling = df.groupby('HomeTeam')['HST'].rolling(nb_match, min_periods=1, closed='left').mean().reset_index(level=0,
+                                                                                                               drop=True)
 df["Hprecision"] = hst_rolling / df["Hatt"].replace(0, np.nan)
 
-ast_rolling = df.groupby('AwayTeam')['AST'].rolling(T, min_periods=1, closed='left').mean().reset_index(level=0,
-                                                                                                        drop=True)
+ast_rolling = df.groupby('AwayTeam')['AST'].rolling(nb_match, min_periods=1, closed='left').mean().reset_index(level=0,
+                                                                                                               drop=True)
 df["Aprecision"] = ast_rolling / df["Aatt"].replace(0, np.nan)
 
 """
@@ -114,13 +121,13 @@ On ajoute 2 colonne, Tprec_weight pour prendre en compte la
 précision en pondérant les buts de l'équipe T = H ou A
 """
 df["Hshot"] = df.HST - df.FTHG + df.FTHG * weight_g
-Hshot_roll = df.groupby('HomeTeam')["Hshot"].rolling(T, min_periods=1, closed='left').mean().reset_index(level=0,
-                                                                                                         drop=True)
+Hshot_roll = df.groupby('HomeTeam')["Hshot"].rolling(nb_match, min_periods=1, closed='left').mean().reset_index(level=0,
+                                                                                                                drop=True)
 df["Hprec_weight"] = Hshot_roll / df["Hatt"].replace(0, np.nan)
 
 df["Ashot"] = df.AST - df.FTAG + df.FTAG * weight_g
-Ashot_roll = df.groupby('AwayTeam')["Ashot"].rolling(T, min_periods=1, closed='left').mean().reset_index(level=0,
-                                                                                                         drop=True)
+Ashot_roll = df.groupby('AwayTeam')["Ashot"].rolling(nb_match, min_periods=1, closed='left').mean().reset_index(level=0,
+                                                                                                                drop=True)
 df["Aprec_weight"] = Ashot_roll / df["Aatt"].replace(0, np.nan)
 
 print(df.head())
@@ -129,6 +136,7 @@ print(df.head())
 """
 elo_init = 1500
 Rappel sur FTR : Domicile=1, Extérieur=2, Nul=0.
+https://www.eloratings.net/about
 """
 # Rn = Ro + K × (W - We)
 # W = [1,.5,0] # dans l'ordre victoir de Home, Nul, défaite de Home
@@ -173,11 +181,11 @@ for index, row in df.iterrows():
     if ecart_buts <= 1:
         G = 1
     elif ecart_buts == 2:
-        G = 1.5
+        G = 1 + 1 / 2
     elif ecart_buts == 3:
-        G = 1.75
+        G = 1 + 3 / 4
     else:
-        G = 1.75 + (ecart_buts - 3) / 8
+        G = 1 + 3 / 4 + (ecart_buts - 3) / 8
 
     # 6 Mise à jour du dictionnaire (pour le PROCHAIN match de ces équipes)
     update = K * G * (W_H - We_H)
@@ -203,7 +211,7 @@ L_col = ["Hforme", "Hatt", "Hdef", "Hatt_sais", "Hdef_sais",
 
 df.dropna(axis=0, how='any', subset=L_col, inplace=True)
 
-print("nb Nan :", df.isna().sum().sum())
+print("nb Nan restant :", df.isna().sum().sum())
 
 df.to_csv("../data/csv/foot_v3.csv", index=False)
-print('CSV sauvegardé')
+print("CSV sauvegardé")
