@@ -1,0 +1,89 @@
+INFORMATIONS GÉNÉRALES
+
+Div: Division (Championnat)
+Date: Date du match (jj/mm/aa)
+Season: Saison (ajouté manuellement ou calculé)
+League: Nom de la ligue (ex: Premier League)
+HomeTeam : Équipe à domicile
+AwayTeam : Équipe à l'extérieur
+
+
+RÉSULTATS DU MATCH
+
+FTHG (Full Time Home Goals) : Buts équipe à domicile en fin de match
+FTAG (Full Time Away Goals) : Buts équipe à l'extérieur en fin de match
+FTR  (Full Time Result): Résultat final  (Domicile=1, Extérieur=2, Nul=0.)
+HTHG (Half Time Home Goals) : Buts équipe à domicile à la mi-temps
+HTAG (Half Time Away Goals) : Buts équipe à l'extérieur à la mi-temps
+HTR  (Half Time Result): Résultat à la mi-temps  (Domicile=1, Extérieur=2, Nul=0.)
+
+
+STATISTIQUES DE JEU
+ 
+HS  (Home Shots): Tirs de l'équipe à domicile
+AS  (Away Shots): Tirs de l'équipe à l'extérieur
+HST (Home Shots on Target): Tirs cadrés domicile
+AST (Away Shots on Target): Tirs cadrés extérieur
+HF  (Home Fouls): Fautes commises par le domicile
+AF  (Away Fouls): Fautes commises par l'extérieur
+HC  (Home Corners): Corners pour le domicile
+AC  (Away Corners): Corners pour l'extérieur
+
+
+STAT VALEURS AJOUTEES
+Hfr : Home Forme récente (calculée sur les 5 derniers matchs à domicile)
+Hatt : Home attaque (moyenne du nombre de buts sur les 5 derniers matchs à domicile)
+Hatt_sais : Home attaque saison (moyenne du nombre de buts sur la saison et la League à domicile)
+Hdef : Home défense (moyenne du nombre de buts encaissés sur les 5 derniers matchs à domicile)
+Hdef_sais : Home défense saison (moyenne du nombre de buts encaissés sur la saison et la League à domicile)
+
+Afr : Away Forme récente (calculée sur les 5 derniers matchs à l'extérieur)
+Aatt : Away attaque (moyenne du nombre de buts sur les 5 derniers matchs à l'extérieur)
+Aatt_sais : Away attaque saison (moyenne du nombre de buts sur la saison et la League à l'extérieur)
+Adef : Away défense (moyenne du nombre de buts encaissés sur les 5 derniers matchs à l'extérieur)
+Adef_sais : Away défense saison (moyenne du nombre de buts encaissés sur la saison et la League à l'extérieur)
+
+Hprecision : Précision à domicile (calculé sur les 5 derniers matchs à domicile : nb_tir_cadré / nb_tir_total)
+Aprecision : Précision à l'extérieur (calculé sur les 5 derniers matchs à l'extérieur : nb_tir_cadré / nb_tir_total)
+Hprec_weight : Précision à domicile (calculé sur les 5 derniers matchs à domicile) avec pondération plus élevée pour les buts
+Aprec_weight : Précision à l'extérieur (calculé sur les 5 derniers matchs à l'extérieur) avec pondération plus élevée pour les buts
+Elo_H_before : Classement Elo de l'équipe à domicile avant le match
+Elo_A_before : Classement Elo de l'équipe à l'extérieur avant le match
+Elo_dif : Différence de classement Elo entre les équipes à domicile et à l'extérieur (calculée comme Elo domicile - Elo extérieur)
+
+pour calcule intermédiaire de la précision :
+    Hshot : (df.HST - df.FTHG + df.FTHG * weight_g)
+    Ashot : (df.AST - df.FTAG + df.FTAG * weight_g)
+
+
+
+
+SANCTIONS
+
+HY (Home Yellow Cards) : Cartons jaunes domicile
+AY (Away Yellow Cards) : Cartons jaunes extérieur
+HR (Home Red Cards): Cartons rouges domicile
+AR (Away Red Cards): Cartons rouges extérieur
+
+
+COTES DES BOOKMAKERS (Match Closing & Odds)
+
+B365H, B365D, B365A : Cotes Bet365 (Victoire H, Nul D, Victoire A)
+BWH, BWD, BWA Cotes Bet&Win
+PSH, PSD, PSA: Cotes Pinnacle (Cotes de clôture)
+WHH, WHD, WHA: Cotes William Hill
+VCH, VCD, VCA: Cotes VC Bet
+
+
+COTES ASIATIQUES / VARIATIONS (PSCH, PSCD, PSCA)
+
+PSCH, PSCD, PSCA: Cotes de clôture Pinnacle (Cotes ajustées avant le coup d'envoi)
+
+
+
+
+betting_cols = [
+    "B365H", "B365A", "B365D", "BWA", "BWH", "BWD",
+    "PSH", "PSA", "PSD", "WHD", "WHH", "WHA",
+    "VCH", "VCD", "VCA", "PSCD", "PSCH", "PSCA"
+]
