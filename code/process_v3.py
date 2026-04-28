@@ -203,6 +203,7 @@ L_col = ["Hforme", "Hatt", "Hdef", "Hatt_sais", "Hdef_sais",
 
 df.dropna(axis=0, how='any', subset=L_col, inplace=True)
 
-print(df.isna().sum())
+print("nb Nan :", df.isna().sum().sum())
+
 df.to_csv("../data/csv/foot_v3.csv", index=False)
 print('CSV sauvegardé')
