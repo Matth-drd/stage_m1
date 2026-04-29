@@ -29,32 +29,64 @@ AF  (Away Fouls): Fautes commises par l'extérieur
 HC  (Home Corners): Corners pour le domicile
 AC  (Away Corners): Corners pour l'extérieur
 
+STAT VALEUR AJOUTEE :
+===============================================================================
+INDICATEURS DE PERFORMANCE - TEMPS RÉGLEMENTAIRE (FULL TIME)
+===============================================================================
 
-STAT VALEURS AJOUTEES
-Hfr : Home Forme récente (calculée sur les 5 derniers matchs à domicile)
-Hatt : Home attaque (moyenne du nombre de buts sur les 5 derniers matchs à domicile)
-Hatt_sais : Home attaque saison (moyenne du nombre de buts sur la saison et la League à domicile)
-Hdef : Home défense (moyenne du nombre de buts encaissés sur les 5 derniers matchs à domicile)
-Hdef_sais : Home défense saison (moyenne du nombre de buts encaissés sur la saison et la League à domicile)
+Indicateurs Domicile (Home) :
+----------------------------
+* FT_Hforme      : Forme récente à domicile (Moyenne des buts marqués lors des 5 derniers matchs à domicile).
+* FT_Hatt        : Potentiel offensif à domicile (Moyenne du nombre de tirs effectués lors des 5 derniers matchs à domicile).
+* FT_Hdef        : Potentiel défensif à domicile (Moyenne du nombre de tirs concédés lors des 5 derniers matchs à domicile).
+* FT_Hatt_sais   : Indice d'attaque relative (Forme récente / moyenne de buts à domicile de la Ligue pour la saison).
+* FT_Hdef_sais   : Indice de défense relative (Buts encaissés récents / moyenne de buts encaissés à domicile de la Ligue pour la saison).
 
-Afr : Away Forme récente (calculée sur les 5 derniers matchs à l'extérieur)
-Aatt : Away attaque (moyenne du nombre de buts sur les 5 derniers matchs à l'extérieur)
-Aatt_sais : Away attaque saison (moyenne du nombre de buts sur la saison et la League à l'extérieur)
-Adef : Away défense (moyenne du nombre de buts encaissés sur les 5 derniers matchs à l'extérieur)
-Adef_sais : Away défense saison (moyenne du nombre de buts encaissés sur la saison et la League à l'extérieur)
+Indicateurs Extérieur (Away) :
+-----------------------------
+* FT_Aforme      : Forme récente à l'extérieur (Moyenne des buts marqués lors des 5 derniers matchs à l'extérieur).
+* FT_Aatt        : Potentiel offensif à l'extérieur (Moyenne du nombre de tirs effectués lors des 5 derniers matchs à l'extérieur).
+* FT_Adef        : Potentiel défensif à l'extérieur (Moyenne du nombre de tirs concédés lors des 5 derniers matchs à l'extérieur).
+* FT_Aatt_sais   : Indice d'attaque relative (Forme récente / moyenne de buts à l'extérieur de la Ligue pour la saison).
+* FT_Adef_sais   : Indice de défense relative (Buts encaissés récents / moyenne de buts encaissés à l'extérieur de la Ligue pour la saison).
 
-Hprecision : Précision à domicile (calculé sur les 5 derniers matchs à domicile : nb_tir_cadré / nb_tir_total)
-Aprecision : Précision à l'extérieur (calculé sur les 5 derniers matchs à l'extérieur : nb_tir_cadré / nb_tir_total)
-Hprec_weight : Précision à domicile (calculé sur les 5 derniers matchs à domicile) avec pondération plus élevée pour les buts
-Aprec_weight : Précision à l'extérieur (calculé sur les 5 derniers matchs à l'extérieur) avec pondération plus élevée pour les buts
-Elo_H_before : Classement Elo de l'équipe à domicile avant le match
-Elo_A_before : Classement Elo de l'équipe à l'extérieur avant le match
-Elo_dif : Différence de classement Elo entre les équipes à domicile et à l'extérieur (calculée comme Elo domicile - Elo extérieur)
+===============================================================================
+INDICATEURS DE PRÉCISION ET EFFICACITÉ
+===============================================================================
 
-pour calcule intermédiaire de la précision :
-    Hshot : (df.HST - df.FTHG + df.FTHG * weight_g)
-    Ashot : (df.AST - df.FTAG + df.FTAG * weight_g)
+* FT_Hprecision    : Précision de tir à domicile (Ratio : tirs cadrés / tirs totaux sur les 5 derniers matchs).
+* FT_Aprecision    : Précision de tir à l'extérieur (Ratio : tirs cadrés / tirs totaux sur les 5 derniers matchs).
+* FT_Hprec_weight  : Précision pondérée à domicile (Ratio calculé avec un coefficient multiplicateur de 1.5 sur les buts).
+* FT_Aprec_weight  : Précision pondérée à l'extérieur (Ratio calculé avec un coefficient multiplicateur de 1.5 sur les buts).
 
+===============================================================================
+SYSTÈME DE CLASSEMENT ELO (FORCE RELATIVE)
+===============================================================================
+
+* Elo_H_before : Score Elo de l'équipe à domicile calculé AVANT le coup d'envoi.
+* Elo_A_before : Score Elo de l'équipe à l'extérieur calculé AVANT le coup d'envoi.
+* Elo_dif      : Écart de niveau relatif (Elo Domicile - Elo Extérieur). Un score positif indique un avantage théorique.
+
+===============================================================================
+VARIABLES DE CONTEXTE ET REPOS
+===============================================================================
+
+* HRepos : Nombre de jours de repos depuis le dernier match de l'équipe à domicile (plafonné à 25 jours).
+* ARepos : Nombre de jours de repos depuis le dernier match de l'équipe à l'extérieur (plafonné à 25 jours).
+
+===============================================================================
+CALCULS INTERMÉDIAIRES (NON INCLUS DANS LE MODÈLE FINAL)
+===============================================================================
+
+* FT_Hshot / FT_Ashot : Volume de frappes ajusté servant au calcul de la précision pondérée.
+  Formule : (Tirs Cadrés - Buts) + (Buts * weight_g)
+
+===============================================================================
+NOTES TECHNIQUES SUR LE TRAITEMENT
+===============================================================================
+1. MÉTHODE : Utilisation de rolling(window=5, closed='left') pour éviter le Data Leakage.
+2. VALEUR PAR DÉFAUT : Repos initial fixé à 30 jours pour le premier match de l'historique.
+3. NETTOYAGE : Suppression automatique des lignes contenant des NaN (période d'initialisation des 5 premiers matchs).
 
 
 
@@ -87,3 +119,26 @@ betting_cols = [
     "PSH", "PSA", "PSD", "WHD", "WHH", "WHA",
     "VCH", "VCD", "VCA", "PSCD", "PSCH", "PSCA"
 ]
+
+
+
+
+
+scrapping :
+# LIQUE 1
+https://www.footballdatabase.eu/fr/competition/general/7909-ligue_1/2014-2015
+https://www.footballdatabase.eu/fr/competition/general/9069-ligue_1/2015-2016
+https://www.footballdatabase.eu/fr/competition/general/9752-ligue_1/2016-2017
+https://www.footballdatabase.eu/fr/competition/general/10570-ligue_1_conforama/2017-2018
+https://www.footballdatabase.eu/fr/competition/general/11341-ligue_1_conforama/2018-2019
+https://www.footballdatabase.eu/fr/competition/general/12113-ligue_1_conforama/2019-2020
+https://www.footballdatabase.eu/fr/competition/general/13236-ligue_1_uber_eats/2020-2021
+https://www.footballdatabase.eu/fr/competition/general/14890-ligue_1_uber_eats/2021-2022
+https://www.footballdatabase.eu/fr/competition/general/16504-ligue_1_uber_eats/2022-2023/272308-journee_1
+https://www.footballdatabase.eu/fr/competition/general/18307-ligue_1_uber_eats/2023-2024/302628-journee_1
+
+#  PREMIER LEAGUE
+https://www.footballdatabase.eu/fr/competition/general/7976-premier_league/2014-2015
+https://www.footballdatabase.eu/fr/competition/general/9065-premier_league/2015-2016
+https://www.footballdatabase.eu/fr/competition/general/9754-premier_league/2016-2017
+https://www.footballdatabase.eu/fr/competition/general/10574-premier_league/2017-2018
