@@ -295,13 +295,21 @@ features_FT = ["FT_Hforme", "FT_Hatt", "FT_Hdef", "FT_Aforme", "FT_Aatt", "FT_Ad
                "FT_Hprecision", "FT_Aprecision", "FT_Hprec_weight", "FT_Aprec_weight",
                "FT_Elo_H", "FT_Elo_A", "FT_Elo_dif"]
 # Data leak :
-# "FT_Hatt_sais", "FT_Hdef_sais", "FT_Aatt_sais", "FT_Adef_sais"
+# leak=["FT_Hatt_sais", "FT_Hdef_sais", "FT_Aatt_sais", "FT_Adef_sais"]
 
 
 features_HT = ["HT_Hforme", "HT_Hdef", "HT_Aforme", "HT_Adef",
                "HT_Elo_H", "HT_Elo_A", "HT_Elo_dif"]
 # Data leak :
-# "HT_Hatt_sais", "HT_Hdef_sais", "HT_Aatt_sais", "HT_Adef_sais"
+# leak=["HT_Hatt_sais", "HT_Hdef_sais", "HT_Aatt_sais", "HT_Adef_sais"]
 
 print(f"\nFeatures FT disponibles ({len(features_FT)}) :", features_FT)
 print(f"\nFeatures HT disponibles ({len(features_HT)}) :", features_HT)
+
+# On crée les colonnes binaires (1 si vrai, 0 si faux)
+df["Hvs"] = (df["FTR"] == 1).astype(int)  # Home vs All
+df["Avs"] = (df["FTR"] == 2).astype(int)  # Away vs All
+df["Dvs"] = (df["FTR"] == 0).astype(int)  # Draw vs All
+
+df.to_csv("../data/csv/foot_v4.csv", index=False)
+print("CSV sauvegardé ✓")
