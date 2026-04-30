@@ -273,6 +273,7 @@ df["FT_avgR_diff"] = df.FT_HavgR - df.FT_AavgR
 # ==================================
 # NETTOYAGE DES NaN
 # ==================================
+
 print("\nNaN avant nettoyage :")
 print(df.isna().sum()[df.isna().sum() > 0])
 
@@ -300,23 +301,18 @@ df.drop(columns=["FT_Hshot", "FT_Ashot"], inplace=True)
 # print("CSV sauvegardé  ")
 
 
-# On crée les colonnes binaires (1 si vrai, 0 si faux)
-df["Hvs"] = (df["FTR"] == 1).astype(int)  # Home vs All
-df["Avs"] = (df["FTR"] == 2).astype(int)  # Away vs All
-df["Dvs"] = (df["FTR"] == 0).astype(int)  # Draw vs All
-
-print(df.info())
-print(df.columns)
-
 # ========================
 # Suppression des colonnes de paris
 # ========================
-betting_col = ['B365H', 'B365D', 'B365A', 'BWH', 'BWD', 'BWA', 'PSH',
-               'PSD', 'PSA', 'WHH', 'WHD', 'WHA', 'VCH', 'VCD', 'VCA', 'PSCH', 'PSCD',
-               'PSCA']
-df.drop(columns=betting_col, inplace=True)
-print(df.columns)
+betting_col_to_drop = [
+    'BWH', 'BWD', 'BWA', 'PSH', 'PSD', 'PSA', 'WHH', 'WHD', 'WHA',
+    'VCH', 'VCD', 'VCA', 'PSCH', 'PSCD', 'PSCA']
+betting = ['B365H', 'B365D', 'B365A']
 
+df.drop(columns=betting_col_to_drop, inplace=True)
+print(df.columns)
+#
+# Ratio
 ratio = [
     ("FT_Hforme", "FT_Aforme", "FT_forme_ratio"),
     ("FT_Hatt", 'FT_Aatt', "FT_att_ratio"),
@@ -335,10 +331,65 @@ ratio = [
 for h, a, r in ratio:
     df[r] = df[h] / (df[a] + 10e-6)
 print(df.columns)
+print("Ratio")
+
+
+def streaks(df):
+    all_teams = pd.unique(df[['HomeTeam', 'AwayTeam']].values.ravel())
+    win_count = {team: 0 for team in all_teams}
+    lose_count = {team: 0 for team in all_teams}
+
+    h_win, a_win = [], []
+    h_lose, a_lose = [], []
+
+    for idx, row in df.iterrows():
+        h_team = row['HomeTeam']
+        a_team = row['AwayTeam']
+
+        # --- ÉTAPE 1 : ON RÉCUPÈRE LES STREAKS AVANT LE MATCH ---
+        h_win.append(win_count[h_team])
+        a_win.append(win_count[a_team])
+        h_lose.append(lose_count[h_team])
+        a_lose.append(lose_count[a_team])
+
+        # --- ÉTAPE 2 : ON MET À JOUR LES COMPTEURS POUR LA SUITE ---
+        res = row['FTR']
+
+        if res == 1:  # Victoire Domicile
+            win_count[h_team] += 1
+            lose_count[h_team] = 0
+            win_count[a_team] = 0
+            lose_count[a_team] += 1
+        elif res == 2:  # Victoire Extérieur
+            win_count[a_team] += 1
+            lose_count[a_team] = 0
+            win_count[h_team] = 0
+            lose_count[h_team] += 1
+        else:  # Match Nul (0)
+            win_count[h_team] = 0
+            lose_count[h_team] = 0
+            win_count[a_team] = 0
+            lose_count[a_team] = 0
+
+    return h_win, a_win, h_lose, a_lose
+
+df['H_WinStreak'], df['A_WinStreak'], df['H_LoseStreak'], df['A_LoseStreak'] = streaks(df)
+# On recalcule les différences pour le modèle
+df['WinStreak_diff'] = df['H_WinStreak'] - df['A_WinStreak']
+df['LoseStreak_diff'] = df['H_LoseStreak'] - df['A_LoseStreak']
+print("Série victoire/défaite")
+
+# On crée les colonnes binaires (1 si vrai, 0 si faux)
+df["Hvs"] = (df["FTR"] == 1).astype(int)  # Home vs All
+df["Avs"] = (df["FTR"] == 2).astype(int)  # Away vs All
+df["Dvs"] = (df["FTR"] == 0).astype(int)  # Draw vs All
+
+print(df.info())
+print(df.columns)
+
 # =================
 # Sauvegarde du dataframe en CSV
 # =================
-
 df.to_csv("../data/csv/foot_v4.csv", index=False)
 print("CSV sauvegardé  ")
 
