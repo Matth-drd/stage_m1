@@ -1,0 +1,127 @@
+\section{Semaine 2 : Nettoyage et calcul de nouveaux déscripteurs}
+
+Durant cette semaine, l'objectif était de débuter le traitement informatique des
+données. Pour cela, j'ai utilisé le langage de programmation Python et
+majoritairement la bibliothèque Pandas. Après avoir collecté les données sur
+10 saisons et 5 championnats, la première étape a été de nettoyer les données
+manquantes et de sélectionner les colonnes pertinentes du dataset.
+J'ai notamment supprimer toutes les données relatives aux cotes des paris. En effet, 
+ces colonnes sont supprimées pour éviter le Data-Leakage. 
+Elles reflètent des probabilités de sortie qui fausseraient l'apprentissage réel du modèle.
+
+Par la suite, j'ai construit de nouvelles caractéristiques à partir des données
+
+brutes. En premier lieu, j'ai calculé le nombre de \textbf{jours de repos} séparant
+le match à la date $t$ du match précédent à la date $t-1$. Ce descripteur peut
+s'avérer peu pertinent pour les équipes ayant été reléguées puis promues, car
+l'interruption entre deux saisons dans des championnats différents introduit un
+biais dans le calcul.
+
+J'ai également mis en place des indicateurs de \textbf{forme récente}, en calculant
+pour chaque équipe la moyenne de buts marqués sur les 5 derniers matchs. De la même
+manière, un indicateur de \textbf{force offensive} a été construit en moyennant le
+nombre de tirs tentés sur les 5 derniers matchs, et un indicateur de
+\textbf{force défensive} en moyennant le nombre de tirs subis sur la même fenêtre
+glissante. Ces trois indicateurs ont été calculés aussi bien pour les statistiques
+de fin de match (\textit{Full Time}) que pour les statistiques de mi-temps
+(\textit{Half Time}).
+
+Pour le \textbf{score Elo}\footnote{Implémentation inspirée de
+\url{https://www.eloratings.net/about}}, chaque équipe part d'un score initial de
+$1500$. Ce score est mis à jour après chaque match en fonction de l'issue du match
+et de l'écart de buts, via un facteur multiplicatif $G$ qui amplifie la mise à jour
+pour les victoires avec un grand écart. Deux scores Elo indépendants ont été
+calculés : l'un basé sur les résultats finaux (\textit{FT\_Elo}), l'autre basé sur
+les résultats à la mi-temps (\textit{HT\_Elo}), afin de capturer la capacité d'une
+équipe à bien débuter les matchs.
+
+Enfin, en s'inspirant de la démarche de Dixon \& Coles --- dont le modèle repose
+sur le rapport $\alpha_i / \alpha_j$ entre les forces d'attaque --- et d'Egidi \&
+Torelli --- qui construisent explicitement la différence de classement $w_n =
+\text{rank}_H - \text{rank}_A$ comme prédicteur --- nous avons ajouté pour chaque
+paire de descripteurs une colonne \textbf{\_diff} (différence $H - A$) et une
+colonne \textbf{\_ratio} (rapport $H / A$). Ces nouvelles variables permettent au
+modèle de disposer directement d'une mesure de l'écart de niveau entre les deux
+équipes, sans avoir à l'inférer implicitement à partir des valeurs brutes.
+
+
+\subsection*{Descriptif des features construites}
+
+L'ensemble des caractéristiques construites est organisé en six groupes fonctionnels.
+
+\begin{itemize}
+
+    \item \textbf{Forme récente} --- \texttt{FT\_Hforme}, \texttt{FT\_Aforme},
+    \texttt{HT\_Hforme}, \texttt{HT\_Aforme} : moyenne des buts marqués sur les
+    5 derniers matchs, respectivement pour l'équipe à domicile (H) et l'équipe
+    visiteuse (A). Cet indicateur est calculé aussi bien sur les statistiques de
+    fin de match (\textit{Full Time}) qu'à la mi-temps (\textit{Half Time}).
+
+    \item \textbf{Force offensive} --- \texttt{FT\_Hatt}, \texttt{FT\_Aatt} :
+    moyenne du nombre de tirs tentés sur les 5 derniers matchs. Proxy de la
+    pression offensive exercée par l'équipe.
+
+    \item \textbf{Force défensive} --- \texttt{FT\_Hdef}, \texttt{FT\_Adef},
+    \texttt{HT\_Hdef}, \texttt{HT\_Adef} : moyenne du nombre de tirs subis sur
+    les 5 derniers matchs (\textit{Full Time}) et des buts concédés à la
+    mi-temps (\textit{Half Time}). Plus cette valeur est faible, plus la défense
+    de l'équipe est solide.
+
+    \item \textbf{Précision} --- \texttt{FT\_Hprecision}, \texttt{FT\_Aprecision} :
+    rapport entre le nombre moyen de tirs cadrés et le nombre moyen de tirs tentés
+    sur les 5 derniers matchs. Mesure la qualité des occasions créées.
+    La variante pondérée \texttt{FT\_Hprec\_weight}, \texttt{FT\_Aprec\_weight}
+    donne un poids supplémentaire (facteur $w_g = 1{,}5$) aux tirs convertis en
+    buts, afin de valoriser l'efficacité offensive.
+
+    \item \textbf{Repos} --- \texttt{HRepos}, \texttt{ARepos} : nombre de jours
+    écoulés depuis le dernier match joué par l'équipe (domicile ou extérieur),
+    plafonné à 25 jours pour limiter les biais liés aux promotions et relégations.
+
+    \item \textbf{Score Elo} --- \texttt{FT\_Elo\_H}, \texttt{FT\_Elo\_A},
+    \texttt{HT\_Elo\_H}, \texttt{HT\_Elo\_A} : score Elo de chaque équipe avant
+    le match, calculé itérativement dans l'ordre chronologique avec un score
+    initial de $1500$. La mise à jour tient compte de l'issue et de l'écart de
+    buts via le facteur $G$. Un score Elo indépendant est calculé sur les
+    résultats à la mi-temps afin de capturer la tendance d'une équipe à bien ou
+    mal démarrer les matchs.
+
+    \item \textbf{Fautes et cartons} --- \texttt{FT\_HavgF}, \texttt{FT\_AavgF},
+    \texttt{FT\_HavgY}, \texttt{FT\_AavgY}, \texttt{FT\_HavgR}, \texttt{FT\_AavgR} :
+    moyennes respectivement du nombre de fautes commises, de cartons jaunes et de
+    cartons rouges reçus sur les 5 derniers matchs. Ces indicateurs renseignent sur
+    le style de jeu de l'équipe et sa discipline, les cartons rouges étant
+    potentiellement corrélés aux matchs joués en infériorité numérique.
+
+\end{itemize}
+
+Pour chacun des groupes ci-dessus, trois colonnes dérivées sont systématiquement
+ajoutées afin de faciliter la tâche des modèles de classification :
+
+\begin{itemize}
+    \item \textbf{\_diff} : différence $H - A$ entre la valeur de l'équipe à
+    domicile et celle de l'équipe visiteuse. Par exemple,
+    \texttt{FT\_forme\_diff} $=$ \texttt{FT\_Hforme} $-$ \texttt{FT\_Aforme}.
+    Cette approche s'inspire directement d'Egidi \& Torelli, qui construisent
+    $w_n = \text{rank}_H - \text{rank}_A$ comme prédicteur explicite de l'écart
+    de niveau.
+
+    \item \textbf{\_ratio} : rapport $H / A$ entre les deux valeurs. Cette
+    formulation est cohérente avec la structure multiplicative du modèle de
+    Dixon \& Coles, dans lequel la probabilité d'issue dépend du rapport
+    $\alpha_i / \alpha_j$ entre les forces d'attaque des deux équipes.
+
+    \item \textbf{\_dif} (pour l'Elo uniquement) : déjà inclus sous la forme
+    \texttt{FT\_Elo\_dif} $=$ \texttt{FT\_Elo\_H} $-$ \texttt{FT\_Elo\_A} et
+    \texttt{HT\_Elo\_dif}.
+\end{itemize}
+
+Au total, \textbf{53 features} sont ainsi construites et sauvegardées dans un fichier csv
+, auxquelles s'ajoutent les trois colonnes cibles
+\texttt{Hvs}, \texttt{Avs} et \texttt{Dvs} pour les analyses
+\textit{One-vs-All}.
+
+Trois colonnes cibles ont également été ajoutées --- \texttt{Hvs}, \texttt{Avs} et
+\texttt{Dvs} --- afin de permettre une analyse selon le paradigme
+\textit{One-vs-All} couramment utilisé en apprentissage automatique pour les
+problèmes de classification multi-classes.

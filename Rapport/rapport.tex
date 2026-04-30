@@ -1,0 +1,73 @@
+\documentclass[11pt, a4paper]{article}
+
+% --- Encodage et Langue ---
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[french]{babel}
+\usepackage{hyperref}
+% --- Mise en page ---
+\usepackage[margin=2.5cm]{geometry} % Marges équilibrées
+
+% --- Mathématiques ---
+\usepackage{amsmath, amssymb, amsthm}
+
+\usepackage{tabularx}
+\usepackage{booktabs}
+\usepackage[table]{xcolor}
+\usepackage{float}
+\definecolor{headerblue}{RGB}{31, 73, 125}
+
+\usepackage{array,multirow,makecell}
+\setcellgapes{1pt}
+\makegapedcells
+\newcolumntype{R}[1]{>{\raggedleft\arraybackslash }b{#1}}
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash }b{#1}}
+\newcolumntype{C}[1]{>{\centering\arraybackslash }b{#1}}
+
+
+
+\title{Rapport de Stage \\ Master MIX Première Année \\ La Rochelle Université}
+\author{Matthieu Durand}
+\date{}
+
+\begin{document}
+\maketitle
+\tableofcontents
+\newpage
+
+
+\section*{Introduction}
+Mon stage c'est déroulé à l'Institut de Mathématiques Appliquées d'Angers, encadré par 
+M. Essoham Ali. L'objectif de ce stage était de mettre en application des modèles étudier 
+durant mon année de master afin de prédire l'issue de match de football. Pour ce faire plusieurs étapes sont 
+nécessaires, la récupération des données, le nettoyage de ces données. Par la suite il a fallut créer des déscripteurs 
+fiable évitant le \textit{data-leakage}\footnote{wikipédia : In statistics and machine 
+learning, leakage (also known as data leakage or target leakage) refers to the use of 
+information during model training that would not be available at prediction time.}. 
+
+ML : Apprentissage supervisé
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\input{s1/s1}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\input{s2/s2}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\input{s3/s3}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\newpage
+\nocite{*}
+\bibliographystyle{plain}
+\bibliography{references}
+\end{document}
