@@ -29,21 +29,25 @@ sur les matchs précédents en excluant le match en cours.
 
 df["FT_Hforme"] = df.groupby('HomeTeam')['FTHG'].rolling(nb_match, min_periods=1, closed='left').mean().reset_index(
     level=0, drop=True)
-df["FT_Hatt"] = df.groupby('HomeTeam')['HS'].rolling(nb_match, min_periods=1, closed='left').mean().reset_index(level=0,
-                                                                                                                drop=True)
-df["FT_Hdef"] = df.groupby('HomeTeam')['AS'].rolling(nb_match, min_periods=1, closed='left').mean().reset_index(level=0,
-                                                                                                                drop=True)
-
-################## AWAY
-
 df["FT_Aforme"] = df.groupby('AwayTeam')['FTAG'].rolling(nb_match, min_periods=1, closed='left').mean().reset_index(
     level=0, drop=True)
-df["FT_Aatt"] = df.groupby('AwayTeam')['AS'].rolling(nb_match, min_periods=1, closed='left').mean().reset_index(level=0,
-                                                                                                                drop=True)
-df["FT_Adef"] = df.groupby('AwayTeam')['HS'].rolling(nb_match, min_periods=1, closed='left').mean().reset_index(level=0,
-                                                                                                                drop=True)
+
+df["FT_Hatt"] = df.groupby('HomeTeam')['HS'].rolling(nb_match, min_periods=1, closed='left').mean().reset_index(
+    level=0, drop=True)
+df["FT_Aatt"] = df.groupby('AwayTeam')['AS'].rolling(nb_match, min_periods=1, closed='left').mean().reset_index(
+    level=0, drop=True)
+df["FT_Hdef"] = df.groupby('HomeTeam')['AS'].rolling(nb_match, min_periods=1, closed='left').mean().reset_index(
+    level=0, drop=True)
+df["FT_Adef"] = df.groupby('AwayTeam')['HS'].rolling(nb_match, min_periods=1, closed='left').mean().reset_index(
+    level=0, drop=True)
 print(df.head())
-print("FT features calculées ✓")
+print("FT features calculées  ")
+# ==================
+# Différences
+# ==================
+df["FT_forme_diff"] = df.FT_Hforme - df.FT_Aforme
+df['FT_att_diff'] = df.FT_Hatt - df.FT_Aatt
+df["FT_def_diff"] = df.FT_Hdef - df.FT_Adef
 
 # COLONNES HALF TIME (HT)
 ########### HT_ : Tforme / Tatt / Tdef /  ############
@@ -58,32 +62,25 @@ Note : les colonnes HS/AS (tirs) n'ont pas d'équivalent mi-temps dans le datase
 On utilise donc HTHG/HTAG comme indicateurs offensifs/défensifs mi-temps.
 """
 
-################## HOME — HALF TIME
+################## HALF TIME
 
 df["HT_Hforme"] = df.groupby('HomeTeam')['HTHG'].rolling(nb_match, min_periods=1, closed='left').mean().reset_index(
     level=0, drop=True)
-
-# Buts concédés à domicile à la mi-temps -> indicateur défensif
-ht_h_conceded = df.groupby('HomeTeam')['HTAG'].rolling(nb_match, min_periods=1, closed='left').mean().reset_index(
-    level=0, drop=True)
-df["HT_Hdef"] = ht_h_conceded
-df["HT_Hatt"] = df.groupby('AwayTeam')['HTHG'].rolling(nb_match, min_periods=1, closed='left').mean().reset_index(
-    level=0, drop=True)
-################## AWAY — HALF TIME
-
 df["HT_Aforme"] = df.groupby('AwayTeam')['HTAG'].rolling(nb_match, min_periods=1, closed='left').mean().reset_index(
     level=0, drop=True)
-
-# Buts concédés à l'extérieur à la mi-temps → indicateur défensif
-ht_a_conceded = df.groupby('AwayTeam')['HTHG'].rolling(nb_match, min_periods=1, closed='left').mean().reset_index(
+# Buts concédés à domicile à la mi-temps -> indicateur défensif
+df["HT_Hdef"] = df.groupby('HomeTeam')['HTAG'].rolling(nb_match, min_periods=1, closed='left').mean().reset_index(
     level=0, drop=True)
-df["HT_Adef"] = ht_a_conceded
-df["HT_Aatt"] = df.groupby('HomeTeam')['HTAG'].rolling(nb_match, min_periods=1, closed='left').mean().reset_index(
+df["HT_Adef"] = df.groupby('AwayTeam')['HTHG'].rolling(nb_match, min_periods=1, closed='left').mean().reset_index(
     level=0, drop=True)
 
+# ======================
+#  différence
+# ======================
+df["HT_forme_diff"] = df.HT_Hforme - df.HT_Aforme
+df['HT_def_diff'] = df.HT_Hdef - df.HT_Adef
 print(df.head())
-
-print("HT features calculées ✓")
+print("HT features calculées  ")
 
 # JOURS DE REPOS
 """
@@ -111,9 +108,11 @@ for index, row in df.iterrows():
 
 df['HRepos'], df['ARepos'] = h_repos, a_repos
 
-print(df.head())
+# différence
+df["Repos_diff"] = df.HRepos - df.ARepos
 
-print("Repos calculé ✓")
+print(df.head())
+print("Repos calculé ")
 
 # INDICATEURS DE PRÉCISION (FT uniquement — tirs non dispo en HT)
 """
@@ -138,9 +137,11 @@ Ashot_roll = df.groupby('AwayTeam')["FT_Ashot"].rolling(nb_match, min_periods=1,
     level=0, drop=True)
 df["FT_Aprec_weight"] = Ashot_roll / df["FT_Aatt"].replace(0, np.nan)
 
+df["FT_prec_diff"] = df.FT_Hprecision - df.FT_Aprecision
+df["FT_prec_weight_diff"] = df.FT_Hprec_weight - df.FT_Aprec_weight
 print(df.head())
 
-print("Précision FT calculée ✓")
+print("Précision FT calculée  ")
 
 # SCORE ELO — FULL TIME
 """
@@ -238,31 +239,36 @@ df['HT_Elo_A'] = a_elo_ht_before
 df["HT_Elo_dif"] = df.HT_Elo_H - df.HT_Elo_A
 
 print(df.head())
-print("ELO FT & HT calculés ✓")
+print("ELO FT & HT calculés  ")
 
 # ==================================
 # indicateur de fautes
 # ==================================
-
+# Fautes (fouls)
 df["FT_HavgF"] = (df.groupby('HomeTeam')['HF'].rolling(nb_match, min_periods=1, closed='left')
                   .mean().reset_index(level=0,
                                       drop=True))
-df["FT_HavgY"] = (df.groupby('HomeTeam')['HY'].rolling(nb_match, min_periods=1, closed='left')
-                  .mean().reset_index(level=0,
-                                      drop=True))
-df["FT_HavgR"] = (df.groupby('HomeTeam')["HR"].rolling(nb_match, min_periods=1, closed='left')
-                  .mean().reset_index(level=0,
-                                      drop=True))
-
 df["FT_AavgF"] = (df.groupby('AwayTeam')["AF"].rolling(nb_match, min_periods=1, closed='left')
+                  .mean().reset_index(level=0,
+                                      drop=True))
+df["FT_avgF_diff"] = df.FT_HavgF - df.FT_AavgF
+# Carton jaune (Yellow)
+df["FT_HavgY"] = (df.groupby('HomeTeam')['HY'].rolling(nb_match, min_periods=1, closed='left')
                   .mean().reset_index(level=0,
                                       drop=True))
 df['FT_AavgY'] = (df.groupby('AwayTeam')["AY"].rolling(nb_match, min_periods=1, closed='left')
                   .mean().reset_index(level=0,
                                       drop=True))
+df['FT_avgY_diff'] = df.FT_HavgY - df.FT_AavgY
+# Carton Rouge (Red card)
+df["FT_HavgR"] = (df.groupby('HomeTeam')["HR"].rolling(nb_match, min_periods=1, closed='left')
+                  .mean().reset_index(level=0,
+                                      drop=True))
 df["FT_AavgR"] = (df.groupby('AwayTeam')["AR"].rolling(nb_match, min_periods=1, closed='left')
                   .mean().reset_index(level=0,
                                       drop=True))
+df["FT_avgR_diff"] = df.FT_HavgR - df.FT_AavgR
+
 # ==================================
 # ==================================
 # NETTOYAGE DES NaN
@@ -277,8 +283,7 @@ On supprime ces lignes — elles représentent ~0.9% du dataframe.
 
 L_col = [
     # Full Time
-    "FT_Hforme", "FT_Hatt", "FT_Hdef",
-    "FT_Aforme", "FT_Aatt", "FT_Adef",
+    "FT_Hforme", "FT_Hatt", "FT_Hdef", "FT_Aforme", "FT_Aatt", "FT_Adef",
     "FT_Hprecision", "FT_Aprecision", "FT_Hprec_weight", "FT_Aprec_weight",
     # Half Time
     "HT_Hforme", "HT_Hdef",
@@ -292,43 +297,49 @@ print("NaN restants :", df.isna().sum().sum())
 df.drop(columns=["FT_Hshot", "FT_Ashot"], inplace=True)
 
 # df.to_csv("../data/csv/foot_v3.csv", index=False)
-# print("CSV sauvegardé ✓")
+# print("CSV sauvegardé  ")
 
-# RÉCAPITULATIF DES FEATURES
-
-features = ['FT_Hforme', 'FT_Hatt', 'FT_Hdef',
-            'FT_Aforme', 'FT_Aatt', 'FT_Adef', 'HT_Hforme', 'HT_Hdef', 'HT_Hatt',
-            'HT_Aforme', 'HT_Adef', 'HT_Aatt', 'HRepos', 'ARepos', 'FT_Hprecision',
-            'FT_Aprecision', 'FT_Hshot', 'FT_Hprec_weight', 'FT_Ashot',
-            'FT_Aprec_weight', 'FT_Elo_H', 'FT_Elo_A', 'FT_Elo_dif', 'HT_Elo_H',
-            'HT_Elo_A', 'HT_Elo_dif', 'FT_HavgF', 'FT_HavgY', 'FT_HavgR',
-            'FT_AavgF', 'FT_AavgY', 'FT_AavgR']
-
-features_FT = [ft for ft in features if ft.startswith('FT_')]
-# ['FT_Hforme', 'FT_Hatt', 'FT_Hdef', 'FT_Aforme',
-# 'FT_Aatt', 'FT_Adef', 'FT_Hprecision', 'FT_Aprecision', 'FT_Hshot', 'FT_Hprec_weight', 'FT_Ashot', 'FT_Aprec_weight',
-# 'FT_Elo_H', 'FT_Elo_A', 'FT_Elo_dif', 'FT_HavgF', 'FT_HavgY', 'FT_HavgR', 'FT_AavgF', 'FT_AavgY', 'FT_AavgR']
-features_HT = ['HT_Hforme', 'HT_Hdef', 'HT_Hatt',
-               'HT_Aforme', 'HT_Adef', 'HT_Aatt', 'HT_Elo_H',
-               'HT_Elo_A', 'HT_Elo_dif', ]
 
 # On crée les colonnes binaires (1 si vrai, 0 si faux)
 df["Hvs"] = (df["FTR"] == 1).astype(int)  # Home vs All
 df["Avs"] = (df["FTR"] == 2).astype(int)  # Away vs All
 df["Dvs"] = (df["FTR"] == 0).astype(int)  # Draw vs All
 
-print(df.info)
+print(df.info())
 print(df.columns)
 
-df.to_csv("../data/csv/foot_v4.csv", index=False)
-print("CSV sauvegardé ✓")
+# ========================
+# Suppression des colonnes de paris
+# ========================
+betting_col = ['B365H', 'B365D', 'B365A', 'BWH', 'BWD', 'BWA', 'PSH',
+               'PSD', 'PSA', 'WHH', 'WHD', 'WHA', 'VCH', 'VCD', 'VCA', 'PSCH', 'PSCD',
+               'PSCA']
+df.drop(columns=betting_col, inplace=True)
+print(df.columns)
 
-# feature créées:
-# ['FT_Hforme', 'FT_Hatt', 'FT_Hdef',
-#  'FT_Aforme', 'FT_Aatt', 'FT_Adef', 'HT_Hforme', 'HT_Hdef', 'HT_Hatt',
-#  'HT_Aforme', 'HT_Adef', 'HT_Aatt', 'HRepos', 'ARepos', 'FT_Hprecision',
-#  'FT_Aprecision', 'FT_Hprec_weight', 'FT_Aprec_weight', 'FT_Elo_H',
-#  'FT_Elo_A', 'FT_Elo_dif', 'HT_Elo_H', 'HT_Elo_A', 'HT_Elo_dif',
-#  'FT_HavgF', 'FT_HavgY', 'FT_HavgR', 'FT_AavgF', 'FT_AavgY', 'FT_AavgR',
-#  ]
+ratio = [
+    ("FT_Hforme", "FT_Aforme", "FT_forme_ratio"),
+    ("FT_Hatt", 'FT_Aatt', "FT_att_ratio"),
+    ("FT_Hdef", 'FT_Adef', "FT_def_ratio"),
+    ("HT_Hforme", 'HT_Aforme', 'HT_forme_ratio'),
+    ('HT_Hdef', "HT_Adef", 'HT_def_ratio'),
+    ('HRepos', "ARepos", 'Repos_ratio'),
+    ("FT_Hprecision", "FT_Aprecision", "FT_prec_ratio"),
+    ("FT_Hprec_weight", "FT_Aprec_weight", "FT_prec_weight_ratio"),
+    ("FT_Elo_H", "FT_Elo_A", "FT_Elo_ratio"),
+    ("HT_Elo_H", "HT_Elo_A", "HT_Elo_ratio"),
+    ("FT_HavgF", "FT_AavgF", "FT_avgF_ratio"),
+    ("FT_HavgY", "FT_AavgY", "FT_avgY_ratio"),
+    ("FT_HavgR", "FT_AavgR", "FT_avgR_ratio")
+]
+for h, a, r in ratio:
+    df[r] = df[h] / (df[a] + 10e-6)
+print(df.columns)
+# =================
+# Sauvegarde du dataframe en CSV
+# =================
+
+df.to_csv("../data/csv/foot_v4.csv", index=False)
+print("CSV sauvegardé  ")
+
 # 'Hvs', 'Avs', 'Dvs' permette de comparer 1 résultat spécifique par rapport au reste
