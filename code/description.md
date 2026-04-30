@@ -1,173 +1,112 @@
-#  Documentation des Données Football
+# Documentation des Données Football
+
+Ce document détaille la structure des données utilisées pour l'analyse et la prédiction de matchs de football. Les
+colonnes sont regroupées par catégories thématiques.
 
 ---
 
-##  INFORMATIONS GÉNÉRALES
+## 1. Informations Générales & Identification
 
-- **Div** : Division (championnat)
-- **Date** : Date du match (jj/mm/aa)
-- **Season** : Saison
-- **League** : Nom de la ligue (ex : Premier League)
-- **HomeTeam** : Équipe à domicile
-- **AwayTeam** : Équipe à l'extérieur
+Données de base permettant d'identifier le contexte du match.
 
----
-
-##  RÉSULTATS DU MATCH
-
-- **FTHG** *(Full Time Home Goals)* : Buts équipe à domicile en fin de match  
-- **FTAG** *(Full Time Away Goals)* : Buts équipe à l'extérieur en fin de match  
-- **FTR** *(Full Time Result)* : Résultat final  
-  - Domicile = 1  
-  - Extérieur = 2  
-  - Nul = 0  
-
-- **HTHG** *(Half Time Home Goals)* : Buts domicile à la mi-temps  
-- **HTAG** *(Half Time Away Goals)* : Buts extérieur à la mi-temps  
-- **HTR** *(Half Time Result)* : Résultat à la mi-temps  
-  - Domicile = 1  
-  - Extérieur = 2  
-  - Nul = 0  
+| Colonne      | Description                           |
+|:-------------|:--------------------------------------|
+| ``Div``      | Division (championnat)                |
+| ``Season``   | Saison                                |
+| ``League``   | Nom de la ligue (ex : Premier League) |
+| ``Date``     | Date du match (aaaa/mm/jj)            |
+| ``HomeTeam`` | Équipe évoluant à domicile            |
+| ``AwayTeam`` | Équipe évoluant à l'extérieur         |
 
 ---
 
-##  STATISTIQUES DE JEU
+## 2. Résultats & Statistiques de Match (Brut)
 
-- **HS** : Tirs domicile  
-- **AS** : Tirs extérieur  
-- **HST** : Tirs cadrés domicile  
-- **AST** : Tirs cadrés extérieur  
-- **HF** : Fautes domicile  
-- **AF** : Fautes extérieur  
-- **HC** : Corners domicile  
-- **AC** : Corners extérieur  
+Données constatées à la fin de la rencontre.
 
----
+### Fin de match (Full Time)
 
-#  STAT VALEUR AJOUTÉE
+- **FTHG / FTAG** : Buts marqués par l'équipe à domicile / extérieur.
+- **FTR** : Résultat final (**1** : Domicile, **2** : Extérieur, **0** : Nul).
 
----
+### Mi-temps (Half Time)
 
-## INDICATEURS DE PERFORMANCE — FULL TIME
+- **HTHG / HTAG** : Buts à la mi-temps (Dom/Ext).
+- **HTR** : Résultat à la mi-temps (**1** : Domicile, **2** : Extérieur, **0** : Nul).
 
-###  Domicile
+### Statistiques de Jeu
 
-- **FT_Hforme** : Moyenne des buts marqués (5 derniers matchs)
-- **FT_Hatt** : Moyenne des tirs effectués
-- **FT_Hdef** : Moyenne des tirs concédés (↓ = meilleure défense)
-
-### ️ Extérieur
-
-- **FT_Aforme** : Moyenne des buts marqués
-- **FT_Aatt** : Moyenne des tirs effectués
-- **FT_Adef** : Moyenne des tirs concédés (↓ = meilleure défense)
+- **HS / AS** : Tirs (Dom/Ext).
+- **HST / AST** : Tirs cadrés (Dom/Ext).
+- **HC / AC** : Corners (Dom/Ext).
+- **HF / AF** : Fautes commises (Dom/Ext).
+- **HY / AY** : Cartons jaunes (Dom/Ext).
+- **HR / AR** : Cartons rouges (Dom/Ext).
 
 ---
 
-##  INDICATEURS MI-TEMPS (HALF TIME)
+## 3. Indicateurs de Performance (Calculés)
 
-###  Domicile
+Moyennes mobiles et indicateurs d'efficacité basés sur les matchs précédents.
+(XX $\in$ {FT,HT})
 
-- **HT_Hforme** : Moyenne des buts à la mi-temps
-- **HT_Hatt** : Pression offensive (proxy basé sur les buts)
-- **HT_Hdef** : Moyenne des buts encaissés
+### Domicile (Home) vs  Extérieur (Away)
 
-### ✈ Extérieur
+| Catégorie             | Domicile          | Extérieur         | Description                                   |
+|:----------------------|:------------------|:------------------|:----------------------------------------------|
+| **Forme (FT/HT)**     | `XX_Hforme`       | `XX_Aforme`       | Moyenne des buts marqués (5 derniers matchs)  |
+| **Attaque (FT)**      | `FT_Hatt`         | `FT_Aatt`         | Moyenne des tirs effectués                    |
+| **Défense (FT/HT)**   | `XX_Hdef`         | `XX_Adef`         | Moyenne des tirs concédés                     |
+| **Elo Score (FT/HT)** | `XX_Elo_H`        | `XX_Elo_A`        | Niveau de puissance de l'équipe (avant match) |
+| **Précision**         | `FT_Hprecision`   | `FT_Aprecision`   | Ratio Tirs cadrés / Tirs totaux               |
+| **Efficacité**        | `FT_Hprec_weight` | `FT_Aprec_weight` | Précision pondérée (poids buts = 1.5)         |
 
-- **HT_Aforme** : Moyenne des buts à la mi-temps
-- **HT_Aatt** : Pression offensive (proxy)
-- **HT_Adef** : Moyenne des buts encaissés
+### Discipline & Repos (E=H,A pour Home et Away)
 
----
-
-##  PRÉCISION & EFFICACITÉ
-
-- **FT_Hprecision** : Tirs cadrés / tirs (domicile)
-- **FT_Aprecision** : Tirs cadrés / tirs (extérieur)
-
-- **FT_Hprec_weight** : Précision pondérée (poids sur les buts = 1.5)
-- **FT_Aprec_weight** : Idem extérieur
-
----
-
-##  SCORE ELO 
-
-- **FT_Elo_H** : Elo domicile avant match  
-- **FT_Elo_A** : Elo extérieur avant match  
-- **FT_Elo_dif** : Différence Elo (avantage domicile si positif)
-
-- **HT_Elo_H** : Elo mi-temps domicile  
-- **HT_Elo_A** : Elo mi-temps extérieur  
-- **HT_Elo_dif** : Différence Elo mi-temps  
+| Catégorie        | Domicile(H)  | Extérieur (A) | Description                                                               |
+|:-----------------|:-------------|:--------------|:--------------------------------------------------------------------------|
+| Fautes           | ``FT_HavgF`` | ``FT_AavgF``  | moyenne des fautes commisent sur 5 matchs                                 |
+| Carton Jaunes(Y) | ``FT_HavgY`` | ``FT_AavgY``  | moyenne des cartons jaunes sur 5 matchs                                   |
+| Carton Rouges(R) | ``FT_HavgR`` | ``FT_AavgR``  | moyenne des cartons rouges sur 5 matchs                                   |
+| Repos            | ``HRepos``   | ``ARepos``    | Nombre de jours entre le dernier match et le match actuel (plafonné à 25) |
 
 ---
 
-## ⚔ DISCIPLINE & IMPACT PHYSIQUE
+## 4. Variables de Comparaison (Diff & Ratios)
 
-###  Domicile
-- **FT_HavgF** : Fautes moyennes  
-- **FT_HavgY** : Cartons jaunes moyens  
-- **FT_HavgR** : Cartons rouges moyens  
+Indicateurs calculés pour mettre en évidence l'écart entre les deux adversaires.(XX = FT,HT)
 
-### ️ Extérieur
-- **FT_AavgF** : Fautes moyennes  
-- **FT_AavgY** : Cartons jaunes moyens  
-- **FT_AavgR** : Cartons rouges moyens  
+> **Formule Différence :** `stat_home - stat_away`  
+> **Formule Ratio :** `stat_home / (stat_away + 10^-6)`
 
----
+| Catégorie    | Différence            | Ratio                    | 
+|:-------------|:----------------------|:-------------------------|
+| Forme        | `'XX_forme_diff'`     | ``XX_forme_ratio``       |
+| Attaque      | `XX_att_diff`         | ``XX_att_ratio``         |
+| Défense      | `XX_def_diff`         | ``XX_def_ratio``         |
+| Précision    | `FT_prec_diff`        | ``FT_prec_ratio``        |
+| Efficacité   | `FT_prec_weight_diff` | ``FT_prec_weight_ratio`` |
+| Elo          | `XX_Elo_diff`         | ``XX_Elo_ratio``         |
+| Repos        | `Repos_diff`          | ``Repos_ratio``          |
+| Fautes       | `FT_avgF_diff`        | ``FT_avgF_ratio``        |
+| Carton jaune | `FT_avgY_diff`        | ``FT_avgY_ratio``        |
+| Carton rouge | `FT_avgR_diff`        | ``FT_avgR_ratio``        |
 
-##  CONTEXTE & REPOS
+## 5. Variables Cibles (Labels)
 
-- **HRepos** : Jours de repos domicile (max 25)
-- **ARepos** : Jours de repos extérieur (max 25)
+Colonnes utilisées pour l'entraînement des modèles de Machine Learning.
 
----
-
-##  VARIABLES CIBLES (LABELS)
-
-- **Hvs** : Victoire domicile (1/0)
-- **Avs** : Victoire extérieur (1/0)
-- **Dvs** : Match nul (1/0)
-
----
-
-## ️ CALCULS INTERMÉDIAIRES
-
-- **FT_Hshot / FT_Ashot** : Volume de tirs ajusté  
-
+- **Hvs** : Victoire Domicile (1 ou 0)
+- **Avs** : Victoire Extérieur (1 ou 0)
+- **Dvs** : Match Nul (1 ou 0)
 
 ---
 
-##  SANCTIONS
+## 6. Cotes des Bookmakers (Supprimées)
 
-- **HY** : Cartons jaunes domicile  
-- **AY** : Cartons jaunes extérieur  
-- **HR** : Cartons rouges domicile  
-- **AR** : Cartons rouges extérieur  
+> **Note Importante :** Ces colonnes sont supprimées pour éviter le **Data Leakage**. Elles reflètent des probabilités
+> de sortie qui fausseraient l'apprentissage réel du modèle.
 
----
-
-##  COTES DES BOOKMAKERS
-
-- **Bet365** : B365H, B365D, B365A  
-- **Bet&Win** : BWH, BWD, BWA  
-- **Pinnacle** : PSH, PSD, PSA  
-- **William Hill** : WHH, WHD, WHA  
-- **VC Bet** : VCH, VCD, VCA  
-
----
-
-##  COTES AJUSTÉES (CLOSING)
-
-- **PSCH, PSCD, PSCA** : Cotes Pinnacle ajustées avant match  
-
----
-
-##  COLONNES DE PARI 
-
-```python
-betting_cols = [
-  "B365H", "B365A", "B365D", "BWA", "BWH", "BWD",
-  "PSH", "PSA", "PSD", "WHD", "WHH", "WHA",
-  "VCH", "VCD", "VCA", "PSCD", "PSCH", "PSCA"
-]
+- **Opérateurs :** Bet365, Bet&Win, Pinnacle, William Hill, VC Bet.
+- **Variables concernées :** `B365H, B365D, B365A, BWH, BWD, BWA, PSH, PSD, PSA, WHH, WHD, WHA, VCH, VCD, VCA`.
+- **Closing Odds (Ajustées) :** `PSCH, PSCD, PSCA`.
