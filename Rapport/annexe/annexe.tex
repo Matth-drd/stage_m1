@@ -1,0 +1,132 @@
+\newpage
+\chapter*{Annexe}
+
+\section{Documentation des Données Football}
+
+Ce document détaille la structure des données utilisées pour l'analyse et la 
+prédiction de matchs de football. Les colonnes sont regroupées par catégories 
+thématiques.
+
+\subsection{Informations Générales \& Identification}
+
+Données de base permettant d'identifier le contexte du match.
+
+\begin{table}[h]
+\centering
+\begin{tabular}{|l|l|}
+\hline
+\textbf{Colonne} & \textbf{Description} \\ \hline
+\texttt{Div} & Division (championnat) \\ \hline
+\texttt{Season} & Saison \\ \hline
+\texttt{League} & Nom de la ligue (ex : Premier League) \\ \hline
+\texttt{Date} & Date du match (aaaa/mm/jj) \\ \hline
+\texttt{HomeTeam} & Équipe évoluant à domicile \\ \hline
+\texttt{AwayTeam} & Équipe évoluant à l'extérieur \\ \hline
+\end{tabular}
+\end{table}
+
+\subsection{Résultats \& Statistiques de Match (Brut)}
+
+Données constatées à la fin de la rencontre.
+
+\subsubsection{Fin de match (Full Time)}
+\begin{itemize}
+    \item \textbf{FTHG / FTAG} : Buts marqués par l'équipe à domicile / extérieur.
+    \item \textbf{FTR} : Résultat final (\textbf{1} : Domicile, \textbf{2} : 
+    Extérieur, \textbf{0} : Nul).
+\end{itemize}
+
+\subsubsection{Mi-temps (Half Time)}
+\begin{itemize}
+    \item \textbf{HTHG / HTAG} : Buts à la mi-temps (Dom/Ext).
+    \item \textbf{HTR} : Résultat à la mi-temps 
+    (\textbf{1} : Domicile, \textbf{2} : Extérieur, \textbf{0} : Nul).
+\end{itemize}
+
+\subsubsection{Statistiques de Jeu}
+\begin{itemize}
+    \item \textbf{HS / AS} : Tirs (Dom/Ext).
+    \item \textbf{HST / AST} : Tirs cadrés (Dom/Ext).
+    \item \textbf{HC / AC} : Corners (Dom/Ext).
+    \item \textbf{HF / AF} : Fautes commises (Dom/Ext).
+    \item \textbf{HY / AY} : Cartons jaunes (Dom/Ext).
+    \item \textbf{HR / AR} : Cartons rouges (Dom/Ext).
+\end{itemize}
+
+\subsection{Indicateurs de Performance (Calculés)}
+
+Moyennes mobiles et indicateurs d'efficacité basés sur les matchs précédents 
+($XX \in \{FT, HT\}$).
+
+\subsubsection{Domicile (Home) vs Extérieur (Away)}
+
+\begin{table}[h]
+\centering
+\resizebox{\textwidth}{!}{
+\begin{tabular}{|l|l|l|l|}
+\hline
+\textbf{Catégorie} & \textbf{Domicile} & \textbf{Extérieur} & \textbf{Description} \\ \hline
+\textbf{Forme (FT/HT)} & \texttt{XX\_Hforme} & \texttt{XX\_Aforme} & Moyenne des 
+buts marqués (5 derniers matchs) \\ \hline
+\textbf{Attaque (FT)} & \texttt{FT\_Hatt} & \texttt{FT\_Aatt} & Moyenne des tirs 
+effectués \\ \hline
+\textbf{Défense (FT/HT)} & \texttt{XX\_Hdef} & \texttt{XX\_Adef} & Moyenne des 
+tirs concédés \\ \hline
+\textbf{Elo Score (FT/HT)} & \texttt{XX\_Elo\_H} & \texttt{XX\_Elo\_A} & Niveau 
+de puissance avant match \\ \hline
+\textbf{Précision} & \texttt{FT\_Hprecision} & \texttt{FT\_Aprecision} & Ratio 
+Tirs cadrés / Tirs totaux \\ \hline
+\textbf{Efficacité} & \texttt{FT\_Hprec\_weight} & \texttt{FT\_Aprec\_weight} & 
+Précision pondérée (poids buts = 1.5) \\ \hline
+\end{tabular}
+}
+\end{table}
+
+\subsubsection{Discipline \& Repos}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{|l|l|l|l|}
+\hline
+\textbf{Catégorie} & \textbf{Dom (H)} & \textbf{Ext (A)} & \textbf{Description} \\ \hline
+Fautes & \texttt{FT\_HavgF} & \texttt{FT\_AavgF} & Moyenne fautes (5 matchs) \\ \hline
+Carton J. & \texttt{FT\_HavgY} & \texttt{FT\_AavgY} & Moyenne jaunes (5 matchs) \\ \hline
+Carton R. & \texttt{FT\_HavgR} & \texttt{FT\_AavgR} & Moyenne rouges (5 matchs) \\ \hline
+Repos & \texttt{HRepos} & \texttt{ARepos} & Jours depuis dernier match (max 25) \\ \hline
+\end{tabular}
+\end{table}
+
+\subsection{Variables de Comparaison (Diff \& Ratios)}
+
+Indicateurs pour mettre en évidence l'écart entre les adversaires 
+($XX \in \{FT, HT\}$).
+
+\begin{itemize}
+    \item \textbf{Formule Différence :} $stat_{home} - stat_{away}$
+    \item \textbf{Formule Ratio :} $\frac{stat_{home}}{stat_{away} + 10^{-6}}$
+\end{itemize}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{|l|l|l|}
+\hline
+\textbf{Catégorie} & \textbf{Différence} & \textbf{Ratio} \\ \hline
+Forme & \texttt{XX\_forme\_diff} & \texttt{XX\_forme\_ratio} \\ \hline
+Attaque & \texttt{XX\_att\_diff} & \texttt{XX\_att\_ratio} \\ \hline
+Défense & \texttt{XX\_def\_diff} & \texttt{XX\_def\_ratio} \\ \hline
+Elo & \texttt{XX\_Elo\_diff} & \texttt{XX\_Elo\_ratio} \\ \hline
+\end{tabular}
+\end{table}
+
+\subsection{Variables Cibles (Labels)}
+
+Colonnes utilisées pour l'entraînement (Machine Learning) : \texttt{Hvs} 
+(Victoire D.), \texttt{Avs} (Victoire E.), \texttt{Dvs} (Nul).
+
+\subsection{Cotes des Bookmakers (Supprimées)}
+
+\begin{quote}
+    \textbf{Note :} Ces colonnes sont supprimées pour éviter le \textbf{Data Leakage}. 
+    Elles reflètent des probabilités de sortie qui fausseraient l'apprentissage réel 
+    du modèle.
+\end{quote}
