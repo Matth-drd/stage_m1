@@ -1,0 +1,90 @@
+\documentclass[11pt, a4paper]{report}
+
+% --- Encodage et Langue ---
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[french]{babel}
+\usepackage{hyperref}
+\usepackage{markdown}
+
+% --- Mise en page ---
+\usepackage[margin=2.5cm]{geometry} % Marges équilibrées
+\usepackage{titlesec}
+% --- Mathématiques ---
+\usepackage{amsmath, amssymb, amsthm}
+
+\usepackage{tabularx}
+\usepackage{booktabs}
+\usepackage[table]{xcolor}
+\usepackage{float}
+\definecolor{headerblue}{RGB}{31, 73, 125}
+
+\usepackage{array,multirow,makecell}
+\setcellgapes{1pt}
+\makegapedcells
+\newcolumntype{R}[1]{>{\raggedleft\arraybackslash }b{#1}}
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash }b{#1}}
+\newcolumntype{C}[1]{>{\centering\arraybackslash }b{#1}}
+
+
+
+\title{Compte rendu hebdomadaire \\ Master MIX Première Année}
+\author{Matthieu Durand}
+\date{}
+
+\begin{document}
+\maketitle
+\tableofcontents
+\newpage
+
+\section*{Tuteurs}
+\begin{itemize}
+    \item M. Essoham Ali, Maître de Conférence à l'Institut de Mathématiques Appliquées d'Angers
+    \item M. Christophe Saint-Jean, Professeur à La Rochelle Université
+\end{itemize}
+
+%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Information}
+Ce document fait office de rapport hebdomadaire, permettant de suivre l'avancement du stage 
+et des différentes étapes. 
+Dans chaque section, nous décrivons les éléments de la semaine ainsi que les démarche 
+suivies. 
+%%%%%%%%%%%%%%%%%%%%%%%%
+
+\section*{Introduction}
+Ce stage s'est déroulé à l'Institut de Mathématiques Appliquées d'Angers, 
+encadré par M. Essoham Ali. L'objectif était de mettre en application des modèles 
+étudiés durant mon année de Master afin de prédire l'issue de matchs de football. 
+Plusieurs étapes ont été nécessaires : la récupération des données, le nettoyage 
+de ces données, et la création de descripteurs fiables évitant le 
+\textit{data-leakage}\footnote{wikipédia : In statistics and machine 
+learning, leakage (also known as data leakage or target leakage) refers to the use of 
+information during model training that would not be available at prediction time.}.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\input{s1/s1.tex}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\input{s2/s2.tex}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\input{s3/s3.tex}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\input{annexe/annexe.tex}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\newpage
+\nocite{*}
+\bibliographystyle{plain}
+\bibliography{references}
+
+\end{document}

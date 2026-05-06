@@ -1,0 +1,22 @@
+\chapter{Semaine 3 }
+
+L'objectif de cette est de poursuivre l'analyse et le traitement de la 
+base de données. 
+Par la suite nous allons débuter l'Implémentation de modèle de classification 
+afin de débuter les prédictions des modèles.
+
+
+\section{Séléction des features}
+
+Un fois les déscripteurs calculés, nous devons choisir les quels conserver pour obtenir 
+les meilleurs résultats possible. 
+Dans cet objectif nous avons explorer la méthode RFE(recursive feature elimination). 
+Étant donné un estimateur externe qui pondère les caractéristiques, l'objectif 
+de l'élimination récursive de caractéristiques (RFE) est de sélectionner les 
+caractéristiques en considérant successivement des ensembles de plus en plus petits.
+La variant que nous avons utilisé est RFECV, CV signifie simplement validation 
+croisée (Cross validation). Le nombre de caractéristiques sélectionnées est ajusté 
+automatiquement en adaptant un sélecteur RFE aux différentes plis de validation 
+croisée. Dans notre cas il est important de ne pas oublier que les données 
+possèdent un ordre chronologique, ainsi nous devons utiliser un \textit{train/test split} 
+adéquat, c'est pour cela que nous avons utilisé \textit{TimeSeriesSplit}.  
