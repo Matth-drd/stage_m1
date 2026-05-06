@@ -373,8 +373,8 @@ def streaks(df):
 
     return h_win, a_win, h_lose, a_lose
 
+
 df['H_WinStreak'], df['A_WinStreak'], df['H_LoseStreak'], df['A_LoseStreak'] = streaks(df)
-# On recalcule les différences pour le modèle
 df['WinStreak_diff'] = df['H_WinStreak'] - df['A_WinStreak']
 df['LoseStreak_diff'] = df['H_LoseStreak'] - df['A_LoseStreak']
 print("Série victoire/défaite")
