@@ -7,7 +7,7 @@ nb_match = 5  # nb match pour calculer la forme récente de l'équipe
 weight_g = 1.5  # Poids pour les buts dans l'indicateur de précision pondéré
 elo_init = 1500  # score elo avant le premier match pour toutes les équipes
 
-df_init = pd.read_csv("../data/csv/foot_clean.csv")
+df_init = pd.read_csv("../data/csv/foot_.csv")
 df = df_init.copy()  # copie du df initial pour éviter de modifier l'original si besoin
 df['Date'] = pd.to_datetime(df['Date'])
 
@@ -269,34 +269,6 @@ df["FT_AavgR"] = (df.groupby('AwayTeam')["AR"].rolling(nb_match, min_periods=1, 
                                       drop=True))
 df["FT_avgR_diff"] = df.FT_HavgR - df.FT_AavgR
 
-# ==================================
-# ==================================
-# NETTOYAGE DES NaN
-# ==================================
-
-print("\nNaN avant nettoyage :")
-print(df.isna().sum()[df.isna().sum() > 0])
-
-"""
-Les NaN apparaissent pour le 1er match de chaque équipe dans les colonnes rolling.
-On supprime ces lignes — elles représentent ~0.9% du dataframe.
-"""
-
-L_col = [
-    # Full Time
-    "FT_Hforme", "FT_Hatt", "FT_Hdef", "FT_Aforme", "FT_Aatt", "FT_Adef",
-    "FT_Hprecision", "FT_Aprecision", "FT_Hprec_weight", "FT_Aprec_weight",
-    # Half Time
-    "HT_Hforme", "HT_Hdef",
-    "HT_Aforme", "HT_Adef"]
-
-df.dropna(axis=0, how='any', subset=L_col, inplace=True)
-
-print("NaN restants :", df.isna().sum().sum())
-
-# Nettoyage des colonnes intermédiaires
-df.drop(columns=["FT_Hshot", "FT_Ashot"], inplace=True)
-
 # df.to_csv("../data/csv/foot_v3.csv", index=False)
 # print("CSV sauvegardé  ")
 
@@ -329,7 +301,7 @@ ratio = [
     ("FT_HavgR", "FT_AavgR", "FT_avgR_ratio")
 ]
 for h, a, r in ratio:
-    df[r] = df[h] / (df[a] + 10e-6)
+    df[r] = df[h] + 1 / (df[a] + 1) # pour éviter de divisier par 0
 print(df.columns)
 print("Ratio")
 
@@ -387,10 +359,40 @@ df["Dvs"] = (df["FTR"] == 0).astype(int)  # Draw vs All
 print(df.info())
 print(df.columns)
 
+# ==================================
+# ==================================
+# NETTOYAGE DES NaN
+# ==================================
+
+print("\nNaN avant nettoyage :")
+print(df.isna().sum()[df.isna().sum() > 0])
+
+"""
+Les NaN apparaissent pour le 1er match de chaque équipe dans les colonnes rolling.
+On supprime ces lignes — elles représentent ~0.9% du dataframe.
+"""
+
+L_col = [
+    # Full Time
+    "FT_Hforme", "FT_Hatt", "FT_Hdef", "FT_Aforme", "FT_Aatt", "FT_Adef",
+    "FT_Hprecision", "FT_Aprecision", "FT_Hprec_weight", "FT_Aprec_weight",
+    # Half Time
+    "HT_Hforme", "HT_Hdef",
+    "HT_Aforme", "HT_Adef"]
+
+df.dropna(axis=0, how='any', subset=L_col, inplace=True)
+
+print("NaN restants :", df.isna().sum().sum())
+
+# Nettoyage des colonnes intermédiaires
+df.drop(columns=["FT_Hshot", "FT_Ashot"], inplace=True)
+
+print(df.info())
+print(df.value_counts("FTR"))
 # =================
 # Sauvegarde du dataframe en CSV
 # =================
 df.to_csv("../data/csv/foot_v4.csv", index=False)
-print("CSV sauvegardé  ")
+print("CSV sauvegardé")
 
 # 'Hvs', 'Avs', 'Dvs' permette de comparer 1 résultat spécifique par rapport au reste

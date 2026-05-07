@@ -117,7 +117,14 @@ def modif_type(df):
     mapping = {'H': 1, 'A': 2, 'D': 0}
     for col in ["FTR", "HTR"]:
         df[col] = df[col].map(mapping)
-    df['Date'] = pd.to_datetime(df['Date'], dayfirst=True, errors='coerce')
+
+    # df['Date'] = pd.to_datetime(df['Date'], dayfirst=True, errors='coerce')
+    # Traitement du format date
+    df['Date'] = df['Date'].astype(str)
+    mask_2digits = df['Date'].str.split('/').str[-1].str.len() == 2
+    df.loc[mask_2digits, 'Date'] = pd.to_datetime(df.loc[mask_2digits, 'Date'], format='%d/%m/%y', errors='coerce')
+    df.loc[~mask_2digits, 'Date'] = pd.to_datetime(df.loc[~mask_2digits, 'Date'], format='%d/%m/%Y', errors='coerce')
+
     df.sort_values('Date', inplace=True)
     return df
 
@@ -131,6 +138,6 @@ if __name__ == "__main__":
     print(f"Dimensions finales : {df_final.shape[0]} matchs, {df_final.shape[1]} variables.")
 
     # Exportation
-    PATH = "../data/csv/foot_clean.csv"
+    PATH = "../data/csv/foot_.csv"
     df_final.to_csv(PATH, index=False)
     print(f"Fichier sauvegardé avec succès dans {PATH}")
