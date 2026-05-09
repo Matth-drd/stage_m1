@@ -301,7 +301,7 @@ ratio = [
     ("FT_HavgR", "FT_AavgR", "FT_avgR_ratio")
 ]
 for h, a, r in ratio:
-    df[r] = df[h] + 1 / (df[a] + 1) # pour éviter de divisier par 0
+    df[r] = df[h] + 1 / (df[a] + 1)  # pour éviter de divisier par 0
 print(df.columns)
 print("Ratio")
 
