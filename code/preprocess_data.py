@@ -360,6 +360,26 @@ print(df.info())
 print(df.columns)
 
 # ==================================
+# Classement des équipes RANK
+# ==================================
+# 1. Calcul des points par match
+df['pts_H'] = df['FTR'].map({1: 3, 0: 1, 2: 0})
+df['pts_A'] = df['FTR'].map({2: 3, 0: 1, 1: 0})
+# 2. Format long (on garde l'ordre : d'abord tous les Home, puis tous les Away)
+h = df[['Season', 'HomeTeam', 'pts_H']].rename(columns={'HomeTeam': 'Team', 'pts_H': 'pts'})
+a = df[['Season', 'AwayTeam', 'pts_A']].rename(columns={'AwayTeam': 'Team', 'pts_A': 'pts'})
+all_stats = pd.concat([h, a])
+# 3. Calcul du cumul par saison/équipe (on trie par date si besoin, mais ici l'ordre du DF suffit)
+# On utilise groupby et shift pour avoir les points AVANT le match
+all_stats['rank_before'] = all_stats.groupby(['Season', 'Team'])['pts'].transform(lambda x: x.cumsum().shift(1, fill_value=0))
+# 4. Réinjection SANS erreur d'index (en utilisant .values)
+# On sépare la première moitié (Home) de la seconde moitié (Away)
+df['H_Rank'] = all_stats.iloc[:len(df)]['rank_before'].values
+df['A_Rank'] = all_stats.iloc[len(df):]['rank_before'].values
+# Nettoyage
+df.drop(columns=['pts_H', 'pts_A'], inplace=True)
+df["Rank_diff"]=df['H_Rank'] - df['A_Rank']
+# ==================================
 # ==================================
 # NETTOYAGE DES NaN
 # ==================================
