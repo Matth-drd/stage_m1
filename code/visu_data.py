@@ -18,8 +18,8 @@ print("Import")
 # %%
 df = pd.read_csv(conf.path_clean_cell)
 reducer = umap.UMAP(random_state=42)
-
-X = df[conf.features].values
+feat = conf.ECD
+X = df[feat].values
 y = df['FTR']
 print("Data loading ")
 
@@ -46,7 +46,7 @@ plt.gca().set_aspect('equal', 'datalim')
 plt.title('UMAP projection', fontsize=24)
 plt.show()
 
-print("plot umap")
+print("plot umap 2D")
 
 # %% umap 3D
 reducer_3d = umap.UMAP(n_components=3, n_neighbors=15, min_dist=0.1, random_state=42)
@@ -56,8 +56,7 @@ embedding_3d = reducer_3d.fit_transform(scaled)
 fig = plt.figure(figsize=(12, 8))
 ax = fig.add_subplot(111, projection='3d')
 
-colors = [sns.color_palette("viridis", 2)[int(x)] for x in df.FTR.fillna(0)]
-
+colors =  [palette[int(x)] for x in df.FTR]
 scatter = ax.scatter(
     embedding_3d[:, 0],
     embedding_3d[:, 1],
@@ -66,6 +65,9 @@ scatter = ax.scatter(
     s=10,
     alpha=0.6
 )
+
+legend_elements_pca3d = [Patch(facecolor=palette[k], label=v) for k, v in label_map.items()]
+ax.legend(handles=legend_elements_pca3d)
 
 ax.set_title('UMAP Projection 3D (Interactif)', fontsize=20)
 ax.set_xlabel('UMAP 1')
@@ -96,6 +98,7 @@ plt.xlabel(f'PC1 ({pca.explained_variance_ratio_[0]*100:.1f}%)')
 plt.ylabel(f'PC2 ({pca.explained_variance_ratio_[1]*100:.1f}%)')
 plt.title('ACP projection', fontsize=24)
 plt.gca().set_aspect('equal', 'datalim')
+plt.legend()
 plt.show()
 print("Plot ACP 2D affiché")
 
@@ -125,3 +128,74 @@ ax.set_zlabel(f'PC3 ({pca_3d.explained_variance_ratio_[2]*100:.1f}%)')
 plt.show()
 print("Plot ACP 3D affiché")
 
+# %% Variance expliquée
+pca_full = PCA(random_state=42)
+pca_full.fit(scaled)
+
+cumvar = pca_full.explained_variance_ratio_.cumsum()
+
+plt.figure(figsize=(10, 5))
+plt.plot(range(1, len(cumvar)+1), cumvar, marker='o', markersize=3)
+plt.axhline(y=0.95, color='r', linestyle='--', label='95% variance')
+plt.xlabel('Nombre de composantes')
+plt.ylabel('Variance expliquée cumulée')
+plt.title('ACP - Variance expliquée cumulée')
+plt.legend()
+plt.grid(True)
+plt.show()
+print("Plot variance expliquée affiché")
+
+# %% Biplot ACP
+pca_biplot = PCA(n_components=2, random_state=42)
+embedding_biplot = pca_biplot.fit_transform(scaled)
+
+fig, ax = plt.subplots(figsize=(14, 10))
+
+scores = embedding_biplot / np.abs(embedding_biplot).max()
+
+ax.scatter(
+    scores[:, 0],
+    scores[:, 1],
+    c=[palette[x] for x in df.FTR],
+    alpha=0.4,
+    s=10
+)
+
+components = pca_biplot.components_.T
+loadings = components / np.abs(components).max()
+
+for i, feature in enumerate(feat):
+    ax.arrow(
+        0, 0,
+        loadings[i, 0],
+        loadings[i, 1],
+        head_width=0.02,
+        head_length=0.02,
+        fc='black',
+        ec='black',
+        alpha=0.8
+    )
+    offset_x = 0.05 if loadings[i, 0] >= 0 else -0.05
+    offset_y = 0.05 if loadings[i, 1] >= 0 else -0.05
+    ax.text(
+        loadings[i, 0] + offset_x,
+        loadings[i, 1] + offset_y,
+        feature,
+        fontsize=7,
+        ha='center',
+        va='center',
+        color='darkred'
+    )
+
+legend_elements_bi = [Patch(facecolor=palette[k], label=v) for k, v in label_map.items()]
+ax.legend(handles=legend_elements_bi)
+
+ax.set_xlim(-1.2, 1.2)
+ax.set_ylim(-1.2, 1.2)
+ax.set_xlabel(f'PC1 ({pca_biplot.explained_variance_ratio_[0]*100:.1f}%)')
+ax.set_ylabel(f'PC2 ({pca_biplot.explained_variance_ratio_[1]*100:.1f}%)')
+ax.set_title('Biplot ACP', fontsize=24)
+ax.axhline(0, color='grey', linewidth=0.5, linestyle='--')
+ax.axvline(0, color='grey', linewidth=0.5, linestyle='--')
+plt.tight_layout()
+plt.show()
