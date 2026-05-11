@@ -5,8 +5,8 @@ EDA des données (analyce exploratoire) :
     
     1. 'get_data.py': récupération + nettoyage des données
     2. 'preprocess_data.py' : nettoyage + création de features
-    3. 'umap.py' : réduction et visualisation des données (via UMAP)
-    4. 'selecet_features.py' : sélection de features (via ACP-VI)
+    3. 'visu_data.py' : réduction et visualisation des données (via UMAP + ACP)
+    4. 'selecet_features.py' : sélection de features 
 
 Implémentation des modèles :
 
