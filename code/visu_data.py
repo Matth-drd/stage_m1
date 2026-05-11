@@ -199,3 +199,20 @@ ax.axhline(0, color='grey', linewidth=0.5, linestyle='--')
 ax.axvline(0, color='grey', linewidth=0.5, linestyle='--')
 plt.tight_layout()
 plt.show()
+
+
+# %% BOXPLOT
+
+t='Hvs'
+for i, col in enumerate(feat):
+    plt.subplot(2, 3, i + 1)
+    sns.boxplot(x=t, y=col, data=df, showfliers=False)
+    plt.title(f"{col}", fontsize=12)
+    if t == 'FTR':
+        plt.xlabel("1=Dom, 0=Nul, 2=Ext")
+    else:
+        plt.xlabel("Résultat (0=Perdu/Nul, 1=Gagné)")
+    plt.ylabel("Valeur")
+plt.suptitle(f"target : {t}",y=0.99)
+plt.tight_layout()
+plt.show()
