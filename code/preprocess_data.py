@@ -4,7 +4,8 @@ import numpy as np
 # Remarque : Dans le code, T représente les équipes T = H ou A
 
 nb_match = 5  # nb match pour calculer la forme récente de l'équipe
-weight_g = 1.5  # Poids pour les buts dans l'indicateur de précision pondéré
+weight_g = 2  # Poids pour les buts dans l'indicateur de précision pondéré
+# Valeur de 2 un but est 2 fois plus important qu'un tir cadré ?
 elo_init = 1500  # score elo avant le premier match pour toutes les équipes
 
 df_init = pd.read_csv("../data/csv/foot_.csv")
@@ -36,9 +37,9 @@ df["FT_Hatt"] = df.groupby('HomeTeam')['HS'].rolling(nb_match, min_periods=1, cl
     level=0, drop=True)
 df["FT_Aatt"] = df.groupby('AwayTeam')['AS'].rolling(nb_match, min_periods=1, closed='left').mean().reset_index(
     level=0, drop=True)
-df["FT_Hdef"] = df.groupby('HomeTeam')['AS'].rolling(nb_match, min_periods=1, closed='left').mean().reset_index(
+df["FT_Hdef"] = df.groupby('HomeTeam')['FTAG'].rolling(nb_match, min_periods=1, closed='left').mean().reset_index(
     level=0, drop=True)
-df["FT_Adef"] = df.groupby('AwayTeam')['HS'].rolling(nb_match, min_periods=1, closed='left').mean().reset_index(
+df["FT_Adef"] = df.groupby('AwayTeam')['FTHG'].rolling(nb_match, min_periods=1, closed='left').mean().reset_index(
     level=0, drop=True)
 print(df.head())
 print("FT features calculées  ")
@@ -101,7 +102,7 @@ for index, row in df.iterrows():
             diff = (date - last_match_date[team]).days
             list_repos.append(min(diff, 25))
         else:
-            list_repos.append(30)  # Valeur par défaut pour le 1er match
+            list_repos.append(25)  # Valeur par défaut pour le 1er match
 
     last_match_date[h_team] = date
     last_match_date[a_team] = date
@@ -121,11 +122,11 @@ Indicateurs de précision : nb_tir_cadré / nb_tir.
 hst_rolling = df.groupby('HomeTeam')['HST'].rolling(nb_match, min_periods=1, closed='left').mean().reset_index(
     level=0, drop=True)
 df["FT_Hprecision"] = hst_rolling / df["FT_Hatt"].replace(0, np.nan)
-
+df["FT_Hprecision"] = df["FT_Hprecision"].clip(lower=0, upper=1) #clip pour éviter valeurs aberrantes
 ast_rolling = df.groupby('AwayTeam')['AST'].rolling(nb_match, min_periods=1, closed='left').mean().reset_index(
     level=0, drop=True)
 df["FT_Aprecision"] = ast_rolling / df["FT_Aatt"].replace(0, np.nan)
-
+df["FT_Aprecision"] = df["FT_Aprecision"].clip(lower=0, upper=1)
 # Précision pondérée par les buts
 df["FT_Hshot"] = df.HST - df.FTHG + df.FTHG * weight_g
 Hshot_roll = df.groupby('HomeTeam')["FT_Hshot"].rolling(nb_match, min_periods=1, closed='left').mean().reset_index(
@@ -301,7 +302,7 @@ ratio = [
     ("FT_HavgR", "FT_AavgR", "FT_avgR_ratio")
 ]
 for h, a, r in ratio:
-    df[r] = df[h] + 1 / (df[a] + 1)  # pour éviter de divisier par 0
+    df[r] = (df[h] + 1) / (df[a] + 1)  # pour éviter de divisier par 0
 print(df.columns)
 print("Ratio")
 
@@ -371,14 +372,15 @@ a = df[['Season', 'AwayTeam', 'pts_A']].rename(columns={'AwayTeam': 'Team', 'pts
 all_stats = pd.concat([h, a])
 # 3. Calcul du cumul par saison/équipe (on trie par date si besoin, mais ici l'ordre du DF suffit)
 # On utilise groupby et shift pour avoir les points AVANT le match
-all_stats['rank_before'] = all_stats.groupby(['Season', 'Team'])['pts'].transform(lambda x: x.cumsum().shift(1, fill_value=0))
+all_stats['rank_before'] = all_stats.groupby(['Season', 'Team'])['pts'].transform(
+    lambda x: x.cumsum().shift(1, fill_value=0))
 # 4. Réinjection SANS erreur d'index (en utilisant .values)
 # On sépare la première moitié (Home) de la seconde moitié (Away)
 df['H_Rank'] = all_stats.iloc[:len(df)]['rank_before'].values
 df['A_Rank'] = all_stats.iloc[len(df):]['rank_before'].values
 # Nettoyage
 df.drop(columns=['pts_H', 'pts_A'], inplace=True)
-df["Rank_diff"]=df['H_Rank'] - df['A_Rank']
+df["Rank_diff"] = df['H_Rank'] - df['A_Rank']
 # ==================================
 # ==================================
 # NETTOYAGE DES NaN
