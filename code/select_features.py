@@ -106,72 +106,11 @@ print(f"Communes 3  ({len(features_communes)}) : {sorted(features_communes)}")
 #         'HT_Hforme', 'HT_def_ratio', 'HT_forme_diff', 'HT_forme_ratio', 'Rank_diff']
 
 
-# %% MLP
-"""
-ALGORITHME : SÉLECTION DE VARIABLES BACKWARD ECD
-
-ENTRÉES :
-    - Dataset_Train, Dataset_Val
-    - Variables_Initiales (Ensemble complet de k variables)
-    - NN_Config (Architecture du réseau de neurones)
-
-DÉBUT
-    1. INITIALISATION :
-       Ensemble_Courant = Variables_Initiales
-       Historique_Modeles = []
-
-    2. BOUCLE DE RECHERCHE BACKWARD (Tant qu'il reste des variables) [2, 3] :
-       
-       A. ENTRAÎNEMENT DU RÉSEAU [2] :
-          Entraîner le NN sur Dataset_Train avec Ensemble_Courant.
-          Appliquer l'Early Stopping (arrêt précoce) pour éviter le surapprentissage [4].
-
-       B. ÉVALUATION DE LA PERFORMANCE [2] :
-          R = Calculer l'erreur (ex: MSE) sur Dataset_Val.
-          Sauvegarder le modèle actuel, l'ensemble de variables et le score R dans Historique_Modeles.
-
-       C. CALCUL DE LA SALIANCE ECD (Formule 5.3.6) [2] :
-          Pour chaque variable d'entrée i de Ensemble_Courant :
-             S_i = Somme sur les poids j (fan-out de l'entrée i) de :
-                   [ 0.5 * (∂²MSE/∂wj²) * wj² ]  - (terme OCD classique)
-                   [ (∂MSE/∂wj) * wj ]           - (correction gradient non nul)
-                   [ 0.5 * (∂MSE/∂wj)² / (∂²MSE/∂wj²) ]
-             
-             (Note : Les dérivées sont calculées via le Dataset_Train)
-
-       D. ÉLIMINATION [2] :
-          Identifier la variable x_min ayant la saliance S_i la plus faible.
-          Supprimer définitivement x_min de Ensemble_Courant.
-
-    3. SÉLECTION DU MODÈLE FINAL (Principe de Parcimonie) [5, 6] :
-       A. Identifier le "Meilleur_Modèle" ayant l'erreur R minimale dans Historique_Modeles.
-       B. Appliquer un TEST DE FISHER pour comparer tous les modèles au Meilleur_Modèle.
-       C. Retenir le groupe de modèles dont les performances ne sont pas significativement 
-          différentes du meilleur.
-       D. Choisir parmi eux le modèle possédant le PLUS PETIT NOMBRE de variables.
-
-FIN
-RETOURNE : Le sous-ensemble de variables optimal et le réseau final associé.
-"""
-
-"""
-descente de gradient pour inferer la matrice Hessienne
-qui permet de calculer la saliency = 1/2 H_{jj}*w_j²   (w le poids)
-=1/2 ∂²MSE/∂w²j * w²j
-saliency is below a given threshold are eliminated. The threshold value is fixed
-by cross validation
-"""
-
-X_train, X_test, y_train, y_test = X.iloc[:split], X.iloc[split:], y.iloc[:split], y.iloc[split:]
-features = conf.features
-nn = MLPClassifier()
-
 # =============================================================================
 # %% MLP + Boucle Backward ECD (Early Cell Damage)
 # =============================================================================
 from sklearn.metrics import log_loss
 
-# 1. Utilisation des données scalées (Crucial pour la saliance)
 X_train_scaled_full = X_scaled[:split]
 y_train_full = y.iloc[:split]
 
@@ -188,11 +127,6 @@ y_val = y_train_full.iloc[val_split:]
 
 
 def get_ecd_saliency(nn, X, y):
-    """
-    Calcule la saliance ECD de chaque feature d'entrée via des différences finies
-    sur la fonction de perte. Cette méthode évite de réécrire la backpropagation
-    et s'adapte automatiquement à la fonction d'activation utilisée.
-    """
     W0 = nn.coefs_[0]  # Poids de la première couche (n_features, n_hidden)
     g0 = np.zeros_like(W0)
     h0 = np.zeros_like(W0)
@@ -218,12 +152,10 @@ def get_ecd_saliency(nn, X, y):
             # Remise à l'état initial
             nn.coefs_[0][i, j] = orig_val
 
-            # Approximations par différences finies centrées
+            # différences finies centrées des dérivées première et seconde
             g0[i, j] = (loss_plus - loss_minus) / (2 * eps)
             h0[i, j] = (loss_plus - 2 * base_loss + loss_minus) / (eps ** 2)
 
-    # Application de la formule ECD (5.3.6)
-    # Précaution : éviter la division par zéro si le hessien est nul (plateau parfait)
     h0_safe = np.where(np.abs(h0) < 1e-8, 1e-8, h0)
 
     term_obd = 0.5 * h0 * (W0 ** 2)
@@ -303,20 +235,20 @@ while len(active_features_idx) > 1:
 
     print(f"Suppression de: '{removed_feature_name}' | Reste: {len(active_features_idx)} | F1-Val: {f1_current:.4f}")
 
-    # Condition d'arrêt dynamique : Si le modèle s'effondre totalement (ex: chute de > 15% du meilleur score)
+    # Condition d'arrêt dynamique : Si le modèle s'effondre totalement
     if f1_current > best_f1_global:
         best_f1_global = f1_current
     elif f1_current < (best_f1_global * 0.85):
-        print("Chute drastique des performances, arrêt de l'élagage.")
+        print("Chute drastique des performances.")
         break
 
 # --- SÉLECTION DU MODÈLE FINAL (TEST DE FISHER / TOLÉRANCE) ---
 history_df = pd.DataFrame(history)
 best_f1 = history_df["f1_val"].max()
-tolerance = 0.015  # Marge de tolérance (approximation du test de Fisher)
+tol = 0.015  # Marge de tolérance (approximation du test de Fisher)
 
 # On garde les modèles dont la performance est statistiquement "proche" de la meilleure
-candidates = history_df[history_df["f1_val"] >= (best_f1 - tolerance)]
+candidates = history_df[history_df["f1_val"] >= (best_f1 - tol)]
 
 # Principe de parcimonie : on prend le modèle avec le moins de features parmi ces candidats
 best_row = candidates.loc[candidates["n_features"].idxmin()]
@@ -330,8 +262,10 @@ print("\n" + "=" * 60)
 print("RÉSULTAT SÉLECTION ECD")
 print("=" * 60)
 print(f"Meilleur F1 observé  : {best_f1:.4f}")
-print(f"Modèle optimal retenu: {best_n_features} features (F1: {best_f1_score:.4f}, tolérance {tolerance})")
+print(f"Modèle optimal retenu: {best_n_features} features (F1: {best_f1_score:.4f}, tolérance {tol})")
 print(f"Features ECD         : {sorted(features_ecd)}")
+# Features ECD: ['FT_Aprec_weight', 'FT_avgY_diff', 'HT_Elo_A', 'HT_Elo_dif', 'HT_Hdef', 'WinStreak_diff']
+
 
 # --- TEST SUR LE VRAI SET DE TEST INÉDIT ---
 # On réentraîne un modèle final propre sur l'intégralité du Train_scaled avec les features sélectionnées
@@ -347,4 +281,3 @@ features_communes_4 = set(features_communes) & set(features_ecd)
 print("\n---  Communes aux 4 méthodes ---")
 print(f"Total ({len(features_communes_4)}) : {sorted(features_communes_4)}")
 
-# Features ECD: ['FT_Aprec_weight', 'FT_avgY_diff', 'HT_Elo_A', 'HT_Elo_dif', 'HT_Hdef', 'WinStreak_diff']

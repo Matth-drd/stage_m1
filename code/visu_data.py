@@ -56,7 +56,7 @@ embedding_3d = reducer_3d.fit_transform(scaled)
 fig = plt.figure(figsize=(12, 8))
 ax = fig.add_subplot(111, projection='3d')
 
-colors =  [palette[int(x)] for x in df.FTR]
+colors = [palette[int(x)] for x in df.FTR]
 scatter = ax.scatter(
     embedding_3d[:, 0],
     embedding_3d[:, 1],
@@ -94,8 +94,8 @@ plt.scatter(
 legend_elements_pca = [Patch(facecolor=palette[k], label=v) for k, v in label_map.items()]
 plt.legend(handles=legend_elements_pca)
 
-plt.xlabel(f'PC1 ({pca.explained_variance_ratio_[0]*100:.1f}%)')
-plt.ylabel(f'PC2 ({pca.explained_variance_ratio_[1]*100:.1f}%)')
+plt.xlabel(f'PC1 ({pca.explained_variance_ratio_[0] * 100:.1f}%)')
+plt.ylabel(f'PC2 ({pca.explained_variance_ratio_[1] * 100:.1f}%)')
 plt.title('ACP projection', fontsize=24)
 plt.gca().set_aspect('equal', 'datalim')
 plt.legend()
@@ -122,9 +122,9 @@ legend_elements_pca3d = [Patch(facecolor=palette[k], label=v) for k, v in label_
 ax.legend(handles=legend_elements_pca3d)
 
 ax.set_title('ACP Projection 3D', fontsize=20)
-ax.set_xlabel(f'PC1 ({pca_3d.explained_variance_ratio_[0]*100:.1f}%)')
-ax.set_ylabel(f'PC2 ({pca_3d.explained_variance_ratio_[1]*100:.1f}%)')
-ax.set_zlabel(f'PC3 ({pca_3d.explained_variance_ratio_[2]*100:.1f}%)')
+ax.set_xlabel(f'PC1 ({pca_3d.explained_variance_ratio_[0] * 100:.1f}%)')
+ax.set_ylabel(f'PC2 ({pca_3d.explained_variance_ratio_[1] * 100:.1f}%)')
+ax.set_zlabel(f'PC3 ({pca_3d.explained_variance_ratio_[2] * 100:.1f}%)')
 plt.show()
 print("Plot ACP 3D affiché")
 
@@ -135,7 +135,7 @@ pca_full.fit(scaled)
 cumvar = pca_full.explained_variance_ratio_.cumsum()
 
 plt.figure(figsize=(10, 5))
-plt.plot(range(1, len(cumvar)+1), cumvar, marker='o', markersize=3)
+plt.plot(range(1, len(cumvar) + 1), cumvar, marker='o', markersize=3)
 plt.axhline(y=0.95, color='r', linestyle='--', label='95% variance')
 plt.xlabel('Nombre de composantes')
 plt.ylabel('Variance expliquée cumulée')
@@ -192,27 +192,33 @@ ax.legend(handles=legend_elements_bi)
 
 ax.set_xlim(-1.2, 1.2)
 ax.set_ylim(-1.2, 1.2)
-ax.set_xlabel(f'PC1 ({pca_biplot.explained_variance_ratio_[0]*100:.1f}%)')
-ax.set_ylabel(f'PC2 ({pca_biplot.explained_variance_ratio_[1]*100:.1f}%)')
+ax.set_xlabel(f'PC1 ({pca_biplot.explained_variance_ratio_[0] * 100:.1f}%)')
+ax.set_ylabel(f'PC2 ({pca_biplot.explained_variance_ratio_[1] * 100:.1f}%)')
 ax.set_title('Biplot ACP', fontsize=24)
 ax.axhline(0, color='grey', linewidth=0.5, linestyle='--')
 ax.axvline(0, color='grey', linewidth=0.5, linestyle='--')
 plt.tight_layout()
 plt.show()
 
-
 # %% BOXPLOT
 
-t='Hvs'
+t = 'Hvs'
+plt.figure(figsize=(20, 16))
 for i, col in enumerate(feat):
-    plt.subplot(2, 3, i + 1)
+    if len(feat)==20:
+        plt.subplot(4, 5, i + 1)
+    elif len(feat)==6:
+        plt.subplot(2, 3, i + 1)
     sns.boxplot(x=t, y=col, data=df, showfliers=False)
     plt.title(f"{col}", fontsize=12)
-    if t == 'FTR':
-        plt.xlabel("1=Dom, 0=Nul, 2=Ext")
-    else:
-        plt.xlabel("Résultat (0=Perdu/Nul, 1=Gagné)")
-    plt.ylabel("Valeur")
-plt.suptitle(f"target : {t}",y=0.99)
+    if len(feat) >=15:
+        plt.xlabel(None)
+    elif len(feat) ==6:
+        if t == 'FTR':
+            plt.xlabel("1=Dom, 0=Nul, 2=Ext")
+        else:
+            plt.xlabel("Résultat (0=Perdu/Nul, 1=Gagné)")
+    # plt.ylabel("Valeur")
+plt.suptitle(f"target : {t}", y=0.999)
 plt.tight_layout()
 plt.show()
