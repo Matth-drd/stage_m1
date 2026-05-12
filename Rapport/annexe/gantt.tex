@@ -1,0 +1,113 @@
+\documentclass[11pt, a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[french]{babel}
+\usepackage{pgfgantt} % Package pour le diagramme
+\usepackage{geometry}
+\geometry{margin=2cm}
+
+
+\definecolor{mygreen}{RGB}{46, 210, 113}
+\definecolor{myblue}{RGB}{67, 45, 215}
+\definecolor{myorange}{RGB}{243, 156, 18}
+
+\begin{document}
+
+\section*{Planning du Stage - Prédiction de Matchs de Football}
+
+\begin{center}
+\begin{ganttchart}[
+    expand chart=\textwidth,
+    hgrid,
+    vgrid={
+        *6{draw=black!20, line width=0.3pt},
+        *1{draw=black, line width=1.5pt}
+    },
+    x unit=0.8cm,
+    time slot format=isodate,
+    time slot unit=day,
+    title/.style={fill=gray!20},
+    title label font=\bfseries,
+    bar/.style={fill=blue!60},
+    bar height=0.6,
+    group/.style={fill=black},
+    group label font=\bfseries
+    ]{2026-04-20}{2026-06-21}
+
+    % Calendrier (Titres)
+    \gantttitlecalendar{week} \\
+
+    % SEMAINE 1
+    % \ganttgroup{Semaine 1 : }{2026-04-20}{2026-04-26} \\
+    \ganttbar[bar/.append style={fill=black!30}]{Revue Littérature}{2026-04-20}{2026-04-26} \\
+    % \ganttgroup{Base de donnée }{2026-04-20}{2026-05-12}\\
+    % \ganttbar{Collecte Données}{2026-04-20}{2026-05-01} \\
+
+    %%%%%%%%%%%
+    % GROUPE PRINCIPAL
+    \ganttgroup[
+        group/.append style={fill=mygreen},
+        group height=.4
+    ]{Base de données}{2026-04-20}{2026-05-17} \\
+    % SOUS-GROUPE 1
+    \ganttgroup[
+        group/.append style={fill=mygreen!70},
+        group height=.4
+    ]{Collecte \& Nettoyage}{2026-04-20}{2026-05-07} \\
+    \ganttbar[bar/.append style={fill=mygreen!50}]{Collecte Données}{2026-04-20}{2026-04-26} \\
+    \ganttbar[bar/.append style={fill=mygreen!50}]{Nettoyage Dataset}{2026-04-27}{2026-05-07} \\
+
+    % SOUS-GROUPE 2
+    \ganttgroup[
+        group/.append style={fill=mygreen!70},
+        group height=.4
+    ]{Feature Engineering}{2026-04-27}{2026-05-17} \\
+    \ganttbar[bar/.append style={fill=mygreen!50}]{Visualisation}{2026-05-04}{2026-05-10}\\
+    \ganttbar[bar/.append style={fill=mygreen!50}]{Création de features}{2026-04-27}{2026-05-08} \\
+    \ganttbar[bar/.append style={fill=mygreen!50}]{Feature Selection}{2026-05-11}{2026-05-17} \\
+    %%%%%%%%%%
+
+    
+
+    % SEMAINE 2
+    % \ganttgroup{Semaine 2 : }{2026-04-27}{2026-05-03} \\
+    % \ganttbar{Nettoyage Dataset}{2026-04-27}{2026-05-04} \\
+    % \ganttbar{Feature Engineering}{2026-04-27}{2026-05-12} \\
+    
+    % SEMAINE 3
+    % \ganttgroup{Semaine 3 : }{2026-05-04}{2026-05-10} \\
+    
+    % \ganttbar{Sélection (RFECV)}{2026-05-04}{2026-05-08} \\
+
+    % SEMAINE 4
+    % \ganttgroup{Semaine 4 : }{2026-05-11}{2026-05-17} \\
+    % \ganttbar{Features selection}{2026-05-11}{2026-05-15}\\
+
+    % SEMAINE 5
+    % \ganttgroup{Semaine 5 : }{2026-05-18}{2026-05-24} \\
+
+    % SEMAINE 6
+    % \ganttgroup{Semaine 6 : }{2026-05-25}{2026-05-31} \\
+
+    \ganttgroup[
+        group/.append style={fill=myblue},
+        group height=.4
+    ]{Modèles}{2026-06-01}{2026-06-21} \\
+    % SEMAINE 7
+    % \ganttgroup{Semaine 7 : }{2026-06-01}{2026-06-07} \\
+
+    
+    % SEMAINE 8
+    % \ganttgroup{Semaine 8 : }{2026-06-08}{2026-06-14} \\
+
+
+    % SEMAINE 9
+    % \ganttgroup{Semaine 9 : }{2026-06-15}{2026-06-21} \\
+
+
+
+
+\end{ganttchart}
+\end{center}
+
+\end{document}
