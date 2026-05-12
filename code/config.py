@@ -64,7 +64,13 @@ Mutual_Info_34 = ['A_Rank', 'A_WinStreak', 'FT_Adef', 'FT_Aforme', 'FT_Aprec_wei
                   'FT_prec_diff', 'FT_prec_ratio', 'FT_prec_weight_diff', 'HT_Elo_A', 'HT_Elo_H', 'HT_Elo_dif',
                   'HT_Elo_ratio',
                   'HT_Hforme', 'HT_def_ratio', 'HT_forme_diff', 'HT_forme_ratio', 'Rank_diff', 'WinStreak_diff']
-
+# pour classifieur classique
+ft_commune = [
+    'FT_Adef', 'FT_Aforme', 'FT_Elo_A', 'FT_Elo_H', 'FT_Elo_dif', 'FT_Elo_ratio', 'FT_Hforme', 'FT_forme_diff',
+    'FT_forme_ratio', 'FT_prec_diff', 'FT_prec_ratio', 'HT_Elo_A', 'HT_Elo_H', 'HT_Elo_dif', 'HT_Elo_ratio',
+    'HT_Hforme', 'HT_def_ratio', 'HT_forme_diff', 'HT_forme_ratio', 'Rank_diff']
+# pour NN
 ECD = ['FT_Aprec_weight', 'FT_avgY_diff', 'HT_Elo_A', 'HT_Elo_dif', 'HT_Hdef', 'WinStreak_diff']
 
 betting = ['B365H', 'B365D', 'B365A']
+
