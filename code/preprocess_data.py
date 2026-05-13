@@ -122,7 +122,7 @@ Indicateurs de précision : nb_tir_cadré / nb_tir.
 hst_rolling = df.groupby('HomeTeam')['HST'].rolling(nb_match, min_periods=1, closed='left').mean().reset_index(
     level=0, drop=True)
 df["FT_Hprecision"] = hst_rolling / df["FT_Hatt"].replace(0, np.nan)
-df["FT_Hprecision"] = df["FT_Hprecision"].clip(lower=0, upper=1) #clip pour éviter valeurs aberrantes
+df["FT_Hprecision"] = df["FT_Hprecision"].clip(lower=0, upper=1)  # clip pour éviter valeurs aberrantes
 ast_rolling = df.groupby('AwayTeam')['AST'].rolling(nb_match, min_periods=1, closed='left').mean().reset_index(
     level=0, drop=True)
 df["FT_Aprecision"] = ast_rolling / df["FT_Aatt"].replace(0, np.nan)
@@ -274,16 +274,11 @@ df["FT_avgR_diff"] = df.FT_HavgR - df.FT_AavgR
 # print("CSV sauvegardé  ")
 
 
-# ========================
-# Suppression des colonnes de paris
-# ========================
-betting_col_to_drop = [
+# on conserve les colonnes de cotes bookmaker pour une potentiel comparaison avec nos modèles
+betting = [
     'BWH', 'BWD', 'BWA', 'PSH', 'PSD', 'PSA', 'WHH', 'WHD', 'WHA',
-    'VCH', 'VCD', 'VCA', 'PSCH', 'PSCD', 'PSCA']
-betting = ['B365H', 'B365D', 'B365A']
+    'VCH', 'VCD', 'VCA', 'PSCH', 'PSCD', 'PSCA', 'B365H', 'B365D', 'B365A']
 
-df.drop(columns=betting_col_to_drop, inplace=True)
-print(df.columns)
 #
 # Ratio
 ratio = [
