@@ -278,6 +278,23 @@ df["FT_avgR_diff"] = df.FT_HavgR - df.FT_AavgR
 betting = [
     'BWH', 'BWD', 'BWA', 'PSH', 'PSD', 'PSA', 'WHH', 'WHD', 'WHA',
     'VCH', 'VCD', 'VCA', 'PSCH', 'PSCD', 'PSCA', 'B365H', 'B365D', 'B365A']
+# création de colonnes proba associé au cotes.
+for c in betting:
+    df[f"{c}_prob"] = 1/df[f"{c}"]
+print("\n proba \n",df.info())
+print("="*5)
+prefixes = ['B365', 'BW', 'PS', 'WH', 'VC', 'PSC']
+
+for p in prefixes:
+    df[f'{p}_Reste_prob'] = df[f'{p}D_prob'] + df[f'{p}A_prob']
+    # Normalisation (pour enlever la marge et avoir une somme H + Reste = 1)
+    # La somme des probas peut dépasser 1 à cause de la marge du bookmaker
+    total_proba = df[f'{p}H_prob'] + df[f'{p}_Reste_prob']
+
+    df[f'{p}_Hvs_prob'] = df[f'{p}H_prob'] / total_proba
+    df[f'{p}_R_norm_prob'] = df[f'{p}_Reste_prob'] / total_proba
+
+print(df[[f'{p}_Hvs_prob' for p in prefixes]].head())
 
 #
 # Ratio
