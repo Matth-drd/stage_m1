@@ -80,4 +80,6 @@ if p_value < 0.05:
     plt.tight_layout()
     plt.show()
 else:
-    print("\n→ Pas de différence statistiquement significative (p >= 0.05).")
+    print("\n Pas de différence statistiquement significative (p >= 0.05).")
+
+# Bwin en 1er suivit de B365
