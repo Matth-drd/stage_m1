@@ -5,13 +5,7 @@ PIPELINE DE PRÉDICTION DE MATCHS DE FOOTBALL — MODÈLES DE CLASSIFICATION
 Ce script entraîne et évalue plusieurs modèles de machine learning pour prédire
 l'issue binaire d'un match de football (victoire à domicile ou non).
 
-Étapes principales :
-    1. Chargement et préparation des données chronologiques
-    2. Définition et optimisation des modèles (via RandomizedSearchCV)
-    3. Analyse financière : ROI et optimisation des seuils de confiance
-    4. Visualisation des métriques de performance (ROC, PR, Calibration)
-
-Dépendances : lightgbm, xgboost, scikit-learn, umap, seaborn, scipy
+Dépendances : lightgbm, xgboost, scikit-learn, umap, scipy
 =============================================================================
 """
 
@@ -23,15 +17,13 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import scikit_posthocs as sp
-import seaborn as sns
 import umap
 from scipy.stats import friedmanchisquare, randint, uniform
 from sklearn.calibration import calibration_curve
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import (
-    auc, brier_score_loss,
-    classification_report, f1_score,
+    auc, brier_score_loss, f1_score,
     precision_recall_curve, roc_curve
 )
 from sklearn.model_selection import RandomizedSearchCV, TimeSeriesSplit
@@ -158,8 +150,8 @@ def compute_roi(y_test, y_pred, cotes, mise=MISE_UNITE):
     return roi, int(total_mise), profit_net
 
 
-# %%=============================================================================
-# CHARGEMENT ET PRÉPARATION DES DONNÉES
+# %%===========================================================================
+# CHARGEMENT DES DONNÉES
 # =============================================================================
 
 df = pd.read_csv(DATA_PATH)
@@ -182,7 +174,6 @@ ratio_poids = (
 # DÉFINITION DES MODÈLES ET GRILLES D'HYPERPARAMÈTRES
 # =============================================================================
 
-# Grille de recherche pour la Régression Logistique
 lr_grid = {
     'penalty': ['l1', 'l2'],  # Type de régularisation
     'C': np.logspace(-3, 3, 20),  # Inverse de la force de régularisation
@@ -190,7 +181,6 @@ lr_grid = {
     'tol': [1e-4, 1e-3, 1e-2]  # Tolérance pour le critère de convergence
 }
 
-# Grille de recherche pour XGBoost
 xgb_grid = {
     'n_estimators': randint(50, 350),  # Nombre d'arbres
     'learning_rate': uniform(0.01, 0.2),  # Taux d'apprentissage
@@ -200,19 +190,29 @@ xgb_grid = {
     'subsample': uniform(0.6, 0.4),  # Fraction de lignes par arbre
     'colsample_bytree': uniform(0.6, 0.4)  # Fraction de colonnes par arbre
 }
+lgbm_grid = {
+    'n_estimators': randint(50, 350),
+    'learning_rate': uniform(0.01, 0.2),
+    'max_depth': [3, 4, 5, 6],
+    'num_leaves': randint(20, 100),  # spécifique LightGBM
+    'reg_alpha': uniform(0, 2),  # L1
+    'reg_lambda': uniform(1, 5),  # L2
+}
 
-# Validation croisée temporelle (respecte l'ordre chronologique des matchs)
+rf_grid = {
+    'n_estimators': randint(50, 350),
+    'max_depth': [3, 4, 5, 6],
+}
+
 cv_tempo = TimeSeriesSplit(n_splits=3)
 
-# Pipeline des modèles : chaque entrée définit le modèle, si un scaler est nécessaire,
-# et si une optimisation RandomizedSearch doit être effectuée.
 models_pipeline = {
     "LogisticRegression (Base)": {
         "instance": LogisticRegression(max_iter=1000, random_state=42, class_weight="balanced"),
         "scaling": True,  # Nécessite une normalisation des features
         "optimize": False  # Entraînement avec paramètres par défaut
     },
-    "LogisticRegression (Optimisée)": {
+    "LogisticRegression (Optimisé)": {
         "instance": LogisticRegression(max_iter=2000, random_state=42, class_weight="balanced"),
         "scaling": True,
         "optimize": True,  # Recherche d'hyperparamètres activée
@@ -227,6 +227,17 @@ models_pipeline = {
         "instance": RandomForestClassifier(n_estimators=100, random_state=42, class_weight="balanced"),
         "scaling": False,  # Les forêts aléatoires ne nécessitent pas de normalisation
         "optimize": False
+    },
+    "RandomForest (optimisé)": {
+        "instance": RandomForestClassifier(n_estimators=100, random_state=42, class_weight="balanced"),
+        "scaling": False,
+        "optimize": True,
+        "search_args": {
+            "param_distributions": rf_grid,
+            "n_iter": 15,
+            "scoring": "neg_log_loss",
+            "cv": cv_tempo
+        }
     },
     "XGBoost (Base)": {
         "instance": XGBClassifier(
@@ -268,11 +279,24 @@ models_pipeline = {
         ),
         "scaling": False,
         "optimize": False
+    },
+    "LightGBM (Optimisé)": {
+        "instance": lgb.LGBMClassifier(
+            class_weight='balanced', random_state=42, verbosity=-1, n_jobs=-1
+        ),
+        "scaling": False,
+        "optimize": True,
+        "search_args": {
+            "param_distributions": lgbm_grid,
+            "n_iter": 15,
+            "scoring": "neg_log_loss",
+            "cv": cv_tempo
+        }
+
     }
 }
-
 # %%=============================================================================
-# ENTRAÎNEMENT ET OPTIMISATION DES MODÈLES
+# train
 # =============================================================================
 
 print("\n" + "=" * 70)
@@ -285,7 +309,6 @@ X_train_brut, X_test_brut, y_train, y_test = split_data(X_brut, df[TARGET_BIN])
 X_train_scaled = scaler.fit_transform(X_train_brut)
 X_test_scaled = scaler.transform(X_test_brut)
 
-# Stockage des modèles entraînés et de leurs données de test associées
 trained_models = {}
 
 for name, config in models_pipeline.items():
@@ -320,6 +343,29 @@ seuils_a_tester = np.arange(0.40, 0.85, 0.01)
 
 # Résultats des stratégies à seuils fixes (standard et sécurisée)
 bilan_data = []
+# %% baseline
+# =====================================
+# =====================================
+preds_baseline = np.ones(len(y_test), dtype=int)
+# F1
+f1_baseline = compute_f1(y_test, preds_baseline, TARGET_BIN)
+# ROI
+roi_std_bl, mise_std_bl, profit_std_bl = compute_roi(y_test, preds_baseline, cotes_test_bilan)
+roi_sec_bl, mise_sec_bl, profit_sec_bl = compute_roi(y_test, preds_baseline, cotes_test_bilan)
+bilan_data.append({
+    "Modèle": "Baseline",
+    "ROI Std (%)": round(roi_std_bl, 2),
+    "Mise Std": mise_std_bl,
+    "Profit Std": round(profit_std_bl, 2),
+    "ROI Sécu (%)": round(roi_sec_bl, 2),
+    "Mise Sécu": mise_sec_bl,
+    "Profit Sécu": round(profit_sec_bl, 2),
+    "F1": round(f1_baseline, 3)
+})
+print(f"\n BASELINE — Accuracy : {y_test.mean():.1%} | F1 : {f1_baseline:.3f} | ROI : {roi_std_bl:.2f}%")
+
+# =====================================
+# %%=====================================
 
 # Résultats de la recherche du seuil optimal par maximisation du profit
 tuning_resultats = {}
@@ -332,7 +378,11 @@ for name, (model, X_te) in trained_models.items():
 
     preds_sec = (probas >= SEUIL_SECURISE).astype(int)
     roi_sec, mise_sec, profit_sec = compute_roi(y_test, preds_sec, cotes_test_bilan)
+    preds_std = (probas >= 0.50).astype(int)
+    f1 = compute_f1(y_test, preds_std, TARGET_BIN)
 
+    predictions_seuil_opti = (probas >= meilleur_seuil).astype(int)
+    f1_opti = f1_score(y_test, predictions_seuil_opti)
     bilan_data.append({
         "Modèle": name,
         "ROI Std (%)": round(roi_std, 2),
@@ -340,7 +390,8 @@ for name, (model, X_te) in trained_models.items():
         "Profit Std": round(profit_std, 2),
         "ROI Sécu (%)": round(roi_sec, 2),
         "Mise Sécu": mise_sec,
-        "Profit Sécu": round(profit_sec, 2)
+        "Profit Sécu": round(profit_sec, 2),
+        "F1-Score (Seuil)": round(f1_opti, 3)
     })
 
     meilleur_profit = -float('inf')
@@ -356,22 +407,15 @@ for name, (model, X_te) in trained_models.items():
             meilleur_seuil = seuil
             meilleure_mise = mise
 
-    tuning_resultats[name] = {
-        "Seuil Optimal": round(meilleur_seuil, 2),
-        "Profit Max": round(meilleur_profit, 2),
-        "ROI (%)": round(meilleur_roi, 2),
-        "Mise Totale": meilleure_mise
-    }
-
 print("\n" + "=" * 95)
 print(f" TABLEAU DE BORD FINANCIER STATIQUE (Seuil Fixe = {SEUIL_SECURISE})")
 print("=" * 95)
-print(pd.DataFrame(bilan_data).to_string(index=False))
-
+print(pd.DataFrame(bilan_data).sort_values("F1", ascending=False).to_string(index=False))
+# %%
 print("\n" + "=" * 75)
 print(f" TUNING DES SEUILS (Dynamique)")
 print("=" * 75)
-print(pd.DataFrame.from_dict(tuning_resultats, orient='index').to_string())
+print(pd.DataFrame.from_dict(tuning_resultats, orient='index').sort_values("ROI (%)", ascending=False).to_string())
 print("=" * 75)
 
 # list des seuils opti trouvé :
@@ -433,13 +477,13 @@ plt.show()
 # %%
 # sauvegarde des modèles
 #
-import joblib
-import os
-
-os.makedirs("models", exist_ok=True)
-joblib.dump(scaler, "models/scaler.pkl")
-
-for name, (model, X_te) in trained_models.items():
-    nom_fichier = name.replace(" ", "_").replace("(", "").replace(")", "")
-    joblib.dump(model, f"models/{nom_fichier}.pkl")
-    print(f"Sauvegardé : models/{nom_fichier}.pkl")
+# import joblib
+# import os
+#
+# os.makedirs("models", exist_ok=True)
+# joblib.dump(scaler, "models/scaler.pkl")
+#
+# for name, (model, X_te) in trained_models.items():
+#     nom_fichier = name.replace(" ", "_").replace("(", "").replace(")", "")
+#     joblib.dump(model, f"models/{nom_fichier}.pkl")
+#     print(f"Sauvegardé : models/{nom_fichier}.pkl")
