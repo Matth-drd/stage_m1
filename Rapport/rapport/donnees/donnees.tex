@@ -1,0 +1,274 @@
+\chapter{Les données}
+
+
+\section{Constitution de la base de données}
+\label{sec:data}
+
+\subsection{Source}
+
+Les données ont été extraites du portail \texttt{football-data.co.uk}, couvrant
+dix saisons consécutives (2014--2024) des cinq grands championnats européens :
+Premier League (Angleterre), LaLiga (Espagne), SerieA (Italie), Bundesliga
+(Allemagne) et Ligue1 (France). Cela représente donc 17\,786 matchs.
+
+\subsection{Distribution des résultats}
+
+Après nettoyage, la répartition des résultats est la suivante :
+\begin{itemize}
+    \item Victoires à domicile : 7\,905 matchs (45\,\%) ;
+    \item Matchs nuls : 5\,420 matchs (25\,\%) ;
+    \item Victoires à l'extérieur : 4\,461 matchs (30\,\%).
+\end{itemize}
+
+Cette distribution confirme l'avantage du terrain dans le football.
+
+\subsection{Structure des données brutes}
+
+Les colonnes des données brutes sont organisées comme suit.
+
+\paragraph{Informations générales.}
+\begin{center}
+    \begin{tabular}{ll}
+        \toprule
+        \textbf{Colonne}  & \textbf{Description}       \\
+        \midrule
+        \texttt{Div}      & Division (championnat)     \\
+        \texttt{Season}   & Saison                     \\
+        \texttt{League}   & Nom de la ligue            \\
+        \texttt{Date}     & Date du match (aaaa/mm/jj) \\
+        \texttt{HomeTeam} & Équipe à domicile          \\
+        \texttt{AwayTeam} & Équipe à l'extérieur       \\
+        \bottomrule
+    \end{tabular}
+\end{center}
+
+\paragraph{Résultats et statistiques de match.}
+Les variables de résultat et de jeu couvrent la fin de match
+(\textit{Full Time}) et la mi-temps (\textit{Half Time}) :
+\begin{itemize}
+    \item \texttt{FTHG} / \texttt{FTAG} : buts marqués (domicile / extérieur) ;
+    \item \texttt{FTR} : résultat final (1 : domicile, 2 : extérieur, 0 : nul) ;
+    \item \texttt{HTHG} / \texttt{HTAG} / \texttt{HTR} : équivalents à la mi-temps ;
+    \item \texttt{HS} / \texttt{AS} : tirs ; \texttt{HST} / \texttt{AST} : tirs cadrés ; \texttt{HC} / \texttt{AC} : corners ;
+    \item \texttt{HF} / \texttt{AF} : fautes ; \texttt{HY} / \texttt{AY} : cartons jaunes ; \texttt{HR} / \texttt{AR} : cartons rouges.
+\end{itemize}
+
+% ============================================================
+
+
+\section{Préparation des données}
+\label{sec:prep}
+
+L'étape de préparation a été réalisée sous Python avec la bibliothèque
+\texttt{Pandas}. Elle consiste à transformer les données brutes issues des
+dix saisons et cinq championnats en un dataset exploitable pour l'apprentissage.
+
+% ============================================================
+
+
+\section{Ingénierie des descripteurs}
+\label{sec:features}
+
+Pour enrichir la capacité prédictive, 61 caractéristiques ont été construites,
+réparties en plusieurs groupes fonctionnels.
+
+\subsection{Indicateurs de forme et de dynamique}
+
+\paragraph{Fenêtre glissante.}
+La moyenne des buts (forme), des tirs tentés (attaque) et des buts subis (défense)
+est calculée sur les 5 derniers matchs de chaque équipe, aussi bien pour les
+statistiques de fin de match (\textit{Full Time}) que de mi-temps (\textit{Half Time}),
+afin de capturer l'état de forme récent.
+
+\paragraph{Précision et efficacité offensive.}
+Le rapport tirs cadrés / tirs tentés mesure la qualité offensive. Une variante
+pondérée (\texttt{FT\_prec\_weight}) applique un facteur $w_g = 2$ aux tirs
+convertis en buts (nous considérons qu'un but est deux fois plus important qu'un 
+tire cadré).
+
+\paragraph{Discipline.}
+Les moyennes de fautes et de cartons (jaunes et rouges) sur les 5 derniers matchs
+permettent de capturer l'agressivité et le risque d'infériorité numérique.
+
+\paragraph{Séries consécutives (\textit{Streaks}).}
+Deux compteurs de série sont maintenus pour chaque équipe :
+\begin{itemize}
+    \item \texttt{H\_WinStreak} / \texttt{A\_WinStreak} : nombre de victoires consécutives avant le match ;
+    \item \texttt{H\_LoseStreak} / \texttt{A\_LoseStreak} : nombre de défaites consécutives correspondantes.
+\end{itemize}
+La mise à jour respecte l'absence de \textit{data leakage} : la valeur enregistrée
+pour un match est celle du compteur \textit{avant} la rencontre. Tout match nul
+remet les deux compteurs à zéro.
+
+\paragraph{Repos.}
+Les variables \texttt{HRepos} et \texttt{ARepos} mesurent le nombre de jours depuis
+le dernier match (plafonné à 25 jours), capturant la fatigue potentielle ou la fraîcheur physique.
+
+\subsection{Modélisation du niveau relatif}
+
+\paragraph{Score Elo.}
+Le score Elo est mis à jour itérativement après chaque match avec un facteur de
+pondération $G$ lié à l'écart de buts, constituant la base de l'évaluation du niveau des équipes.
+
+\paragraph{Classement ('Rank')}
+Nous avons également calculé un classement basé sur les points au cours d'une saison.
+Une victoire rapporte 3 points, un match nul 1 point, et une défaite 0 point.
+Ce classement est mis à jour après chaque match, reflétant la performance relative des équipes au fil de la saison.
+
+\paragraph{Variables de comparaison.}
+En s'inspirant des travaux de Dixon \& Coles\cite{dixon} et Egidi \&
+Torelli\cite{egidi}, des variables de comparaison entre l'équipe à domicile
+(H) et l'équipe visiteuse (A) sont générées pour chaque groupe de descripteurs selon deux formules :
+
+\begin{center}
+    \begin{tabular}{lll}
+        \toprule
+        \textbf{Suffixe} & \textbf{Calcul} & \textbf{Justification théorique}           \\
+        \midrule
+        \texttt{\_diff}  & $H - A$         & Écart de niveau explicite \cite{egidi} \\
+        \texttt{\_ratio} & $H / A$         & Structure multiplicative \cite{dixon}  \\
+        \bottomrule
+    \end{tabular}
+\end{center}
+
+La formule du ratio utilise $\frac{stat\_H + 1}{stat\_A +1}$ pour éviter les 
+divisions par zéro.
+
+\subsection{Récapitulatif des indicateurs calculés}
+
+\begin{longtable}{lllp{5.5cm}}
+    \toprule
+    \textbf{Catégorie} & \textbf{Domicile} & \textbf{Extérieur} & \textbf{Description} \\
+    \midrule
+    \endfirsthead
+    \toprule
+    \textbf{Catégorie} & \textbf{Domicile} & \textbf{Extérieur} & \textbf{Description} \\
+    \midrule
+    \endhead
+    Forme (FT/HT)     & \texttt{XX\_Hforme}       & \texttt{XX\_Aforme}       & Moyenne buts (5 derniers matchs) \\
+    Attaque (FT)      & \texttt{FT\_Hatt}         & \texttt{FT\_Aatt}         & Moyenne des tirs effectués \\
+    Défense (FT/HT)   & \texttt{XX\_Hdef}         & \texttt{XX\_Adef}         & Moyenne des tirs concédés \\
+    Elo               & \texttt{XX\_Elo\_H}        & \texttt{XX\_Elo\_A}        & Niveau de puissance avant match \\
+    Rank              & \texttt{H\_Rank}         & \texttt{A\_Rank}         & Classement basé sur les points  \\
+    Précision         & \texttt{FT\_Hprecision}   & \texttt{FT\_Aprecision}   & Ratio tirs cadrés / tirs totaux \\
+    Efficacité pond.  & \texttt{FT\_Hprec\_weight} & \texttt{FT\_Aprec\_weight} & Précision pondérée ($w_g = 1{,}5$) \\
+    Fautes            & \texttt{FT\_HavgF}        & \texttt{FT\_AavgF}        & Moyenne fautes (5 matchs) \\
+    Cartons J.        & \texttt{FT\_HavgY}        & \texttt{FT\_AavgY}        & Moyenne jaunes (5 matchs) \\
+    Cartons R.        & \texttt{FT\_HavgR}        & \texttt{FT\_AavgR}        & Moyenne rouges (5 matchs) \\
+    Repos             & \texttt{HRepos}          & \texttt{ARepos}          & Jours depuis dernier match (max 25) \\
+    \bottomrule
+    \caption{Indicateurs de performance calculés par équipe. (XX=FT ou HT)}
+\end{longtable}
+
+% ============================================================
+\section{Transformation et Normalisation des Données des bookmakers}
+Afin d'établir une comparaison entre notre modèle de classification 
+binaire et les bookmakers, nous avons procédé à une restructuration des 
+cotes des bookmakers (Bet365, Pinnacle, etc.). La méthodologie employée est la suivante, 
+dans un premier temps inversion des cotes afin de convertir les cotes décimales en 
+probabilités implicites brutes selon la formule $P_{brute} = \frac{1}{\text{cote}}$.
+Par la suite, afin de pouvoir comparer avec un modèle OvR, nous avons binarisé les issues 
+du match nul ($P_D$) et de la victoire extérieure ($P_A$) pour créer la classe 
+complémentaire au succès à domicile, notée $P_{Reste}$. Enfin, les probabilités brutes 
+ont été normalisées afin que la somme des probabilités de chaque 
+bookmaker soit égale à 1.
+
+Cette étape garantit que le modèle et les bookmakers sont évalués sur le même 
+espace probabiliste : $P(Home) + P(Reste) = 1$.
+
+
+Par la suite nous avons procédé à un classement des bookmakers 
+entre eux à l'aide d'un Critical Difference diagramme. Cette méthode se 
+base sur un test de Friedman afin de déterminer s'il éxiste ou non des différences 
+significative entre les éléments comparer. Une fois ce test réalisé, l'analyse peut 
+avoir lieu. 
+
+\begin{figure}
+    \centering 
+    \includegraphics[width=0.75\textwidth]{../../plot/cdd.png}
+    \caption{Diagram de différences critique entre les bookmaker}
+    \label{fig:cdd}
+\end{figure}
+
+
+
+
+\section{Définition des variables cibles}
+\label{sec:labels}
+
+Le problème est traité comme une classification multi-classes.
+Pour faciliter l'apprentissage et permettre une approche One-vs-Rest,
+trois colonnes cibles binaires sont créées :
+
+\begin{itemize}
+    \item \texttt{Hvs} : victoire à domicile vs (nul ou défaite) ;
+    \item \texttt{Avs} : victoire à l'extérieur vs (nul ou victoire à domicile) ;
+    \item \texttt{Dvs} : match nul vs (victoire ou défaite).
+\end{itemize}
+
+Ce découpage permet d'entraîner un classifieur binaire spécialisé pour
+chaque issue, cela permet également de rééquilibrer les classes,
+nous passons d'une distribution 45\% - 25\% - 30\% à 45\% - 55\%.
+De plus par la suite, si nous souhaitons entrainer un modèle par cible,
+cela nous permettra si nécessaire de combiner les modèles afin
+d'obtenir une prédiction plus robuste.
+
+
+\subsection{Validation Statistique par Tests de Friedman et Nemenyi}
+
+L'évaluation de la précision des bookmakers repose sur une approche
+statistique rigoureuse en deux étapes, visant à comparer les rangs
+moyens des \textit{Log-Loss} binaires obtenues sur l'issue « Home
+vs Reste ».
+
+\begin{itemize}
+    \item \textbf{Test de Friedman :} Nous utilisons ce test
+ non-paramétrique pour vérifier s'il existe une différence
+ significative globale entre les performances des différents
+ acteurs. Le rejet de l'hypothèse nulle ($p < 0,05$) indique
+ qu'au moins un bookmaker se distingue statistiquement des autres.
+    \item \textbf{Test Post-hoc de Nemenyi :} Suite au test de Friedman,
+ le test de Nemenyi est appliqué pour identifier les paires
+ d'acteurs dont les performances diffèrent significativement.
+ Ce test permet de calculer la \textit{Critical Difference} (CD).
+    \item \textbf{Interprétation du CD Diagram :} Sur le diagramme généré,
+ la position sur l'axe des abscisses indique le rang moyen (un
+ rang proche de 1 étant optimal). Les segments horizontaux relient
+ les groupes d'acteurs dont la différence de performance n'est pas
+ statistiquement significative au seuil $\alpha = 0,05$.
+\end{itemize}
+
+Cette méthodologie permet de situer précisément notre modèle MLP au sein de
+la hiérarchie du marché, en distinguant les gains de performance réels des
+fluctuations aléatoires des données.
+
+\subsubsection{Détails mathématiques et interprétation des p-values}
+
+L'analyse s'appuie sur une hiérarchie de tests statistiques garantissant
+la robustesse des conclusions :
+
+\begin{enumerate}
+    \item \textbf{Test de Friedman :} Ce test transforme les scores de
+     \textit{Log-Loss} en rangs pour chaque observation. La statistique
+ calculée suit approximativement une loi du $\chi^2$. Une \textit
+{p-value} globale inférieure à 0,05 nous permet de rejeter l'hypothèse
+ nulle d'équivalence des performances. Ce test est privilégié ici
+ car il ne nécessite pas l'hypothèse de normalité des distributions
+ de pertes, souvent violée dans les données de paris sportifs.
+
+    \item \textbf{Test Post-hoc de Nemenyi :} Ce test effectue des
+ comparaisons par paires. Il définit une distance seuil appelée
+ \textit{Critical Difference} (CD). Pour chaque paire de bookmakers,
+ une \textit{p-value} locale est calculée :
+    \begin{itemize}
+        \item Si $p < 0,05$, l'écart entre les rangs moyens est supérieur à
+     la CD, marquant une supériorité statistique.
+        \item Si $p \geq 0,05$, les acteurs sont regroupés au sein d'une même
+     « clique », matérialisée par un segment horizontal sur le diagramme.
+    \end{itemize}
+\end{enumerate}
+
+Cette rigueur mathématique permet d'isoler les leaders du marché (ceux situés
+à gauche sans connexions aux acteurs de droite) et de valider si notre modèle
+MLP apporte une valeur ajoutée statistiquement significative par rapport aux
+benchmarks industriels.

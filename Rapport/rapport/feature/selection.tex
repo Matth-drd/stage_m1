@@ -1,0 +1,131 @@
+\chapter{Sélection et Visualisation}
+
+Dans ce chapitre, nous expliquons quelles caractéristiques (features) 
+sont conservées, et quelles méthodes ont été utiliser pour les choisir. Nous abordons 
+également l'étape de Visualisation de nos données.
+
+\section{Sélection}
+\subsection{RFECV}
+
+\subsection{ACP}
+
+\subsection{SelectKBest}
+
+% \section{f\_classif}
+
+% \section{mutual\_info\_classif}
+
+
+\section{Visualisation}
+Suite à cette étape de sélections, nous avons choisis de conserver les déscripteurs communs 
+aux trois méthode RFECV, ANOVA et mutual information, ansin 20 déscripteurs sont 
+conservées pour les modèles de classification: 
+
+\noindent ['FT\_Adef', 'FT\_Aforme', 'FT\_Elo\_A', 'FT\_Elo\_H', 'FT\_Elo\_dif', 'FT\_Elo\_ratio', 'FT\_Hforme', 'FT\_forme\_diff',
+'FT\_forme\_ratio', 'FT\_prec\_diff', 'FT\_prec\_ratio', 'HT\_Elo\_A', 'HT\_Elo\_H', 'HT\_Elo\_dif', 'HT\_Elo\_ratio',
+'HT\_Hforme', 'HT\_def\_ratio', 'HT\_forme\_diff', 'HT\_forme\_ratio', 'Rank\_diff'].
+\newline 
+Une liste de 6 déscripteurs sera sélectionnés pour les réseaux de neurones : 
+
+\noindent ['FT\_Aprec\_weight', 'FT\_avgY\_diff', 'HT\_Elo\_A', 'HT\_Elo\_dif', 'HT\_Hdef', 'WinStreak\_diff'].
+
+A présent, nous allons aborder la Visualisation des données par rapport aux deux listes de 
+déscripteurs. Nous avons utilisé Umap, ACP biplot ainsi que Boxplot afin de projeter 
+differement.
+
+\subsection{Umap}
+
+Nous avons utilisé la méthode Umap afin de réduire la dimensionnalité de nos données. 
+Grâce à cette méthode, nous avons projeté nos données en 2 et 3 dimensions.
+
+\begin{figure}[H]
+    \centering
+    % Première mini-page (gauche)
+    \begin{minipage}{0.48\textwidth}
+        \centering
+        \includegraphics[width=0.9\textwidth]{../../../plot/umap_2d_ft_co.png}
+        \caption{UMAP 2D : 20 features communes.}
+        \label{fig:umap_20}
+    \end{minipage}
+    \hfill 
+    % Seconde mini-page (droite)
+    \begin{minipage}{0.48\textwidth}
+        \centering
+        \includegraphics[width=0.9\textwidth]{../../../plot/umap_2d_ft_ecd.png}
+        \caption{UMAP 2D : 6 features (modèle ECD).}
+        \label{fig:umap_6}
+    \end{minipage}
+\end{figure}
+
+Sur la figure \ref{fig:umap_20} nous avons projeté nos données en utilisant les 
+déscripteurs sélectionnés par RFECV, ANOVA, Mutual information. Au total 20 features 
+sont retenues communes à ces trois méthodes. Sur la figure \ref{fig:umap_6} nous avons 
+projeté en utilisant les déscripteurs retenues grâce au MLP utilisant la méthode ECD 
+(basé sur \cite{leray}).
+
+\begin{figure}[H]
+    \centering
+    % Première mini-page (gauche)
+    \begin{minipage}{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{../../../plot/umap_3d_ft_co.png}
+        \caption{UMAP 2D : 20 features communes.}
+        \label{fig:umap_3d_20}
+    \end{minipage}
+    \hfill 
+    % Seconde mini-page (droite)
+    \begin{minipage}{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{../../../plot/umap_3d_ft_ecd.png}
+        \caption{UMAP 2D : 6 features (modèle ECD).}
+        \label{fig:umap_3d_6}
+    \end{minipage}
+\end{figure}
+Ici, nous avons projeté en 3 dimensions afin de pouvoir mieux explorer la répartition et 
+la séparabilité de nos données.
+
+
+\subsection{ACP}
+\begin{figure}[H]
+    \centering
+    % Première mini-page (gauche)
+    \begin{minipage}{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{../../../plot/acp_2d_ft_co.png}
+        \caption{acp 2D : 20 features communes.}
+        \label{fig:acpd_2d_20}
+    \end{minipage}
+    \hfill 
+    % Seconde mini-page (droite)
+    \begin{minipage}{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{../../../plot/acp_2d_ft_ecd.png}
+        \caption{acp 2D : 6 features (modèle ECD).}
+        \label{fig:acp_3d_6}
+    \end{minipage}
+\end{figure}
+
+
+
+\subsection{Boxplot}
+
+\begin{figure}[H]    
+    \centering
+    \includegraphics[width=\textwidth]{../../../plot/boxplot_Hvs_ft_co.png}
+    \caption{Boxplot : 20 features communes.}
+    \label{fig:Boxplot_20}
+\end{figure}
+
+Nous avons également comparé la séparabilité des classes en utilisant la cible 'Hvs' 
+( Homve versus Rest ). 
+
+\begin{figure}[H] 
+    \centering
+    \includegraphics[width=\textwidth]{../../../plot/boxplot_Hvs_ft_ecd.png}
+    \caption{Boxplot : 6 features (modèle ECD).}
+    \label{fig:Boxplot_6}
+\end{figure}
+
+
+Les figures \ref{fig:Boxplot_20} et \ref{fig:Boxplot_6} montre la différence entre 
+les features sélectionnés.

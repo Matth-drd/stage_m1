@@ -1,0 +1,188 @@
+\documentclass[12pt,a4paper]{report}
+
+% --- Encodage et langue ---
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[french]{babel}
+
+% --- Mise en page ---
+\usepackage[top=2.5cm, bottom=2.5cm, left=2.5cm, right=2.5cm]{geometry}
+\usepackage{setspace}
+\onehalfspacing
+\setlength{\headheight}{14.49998pt}
+\addtolength{\topmargin}{-2.49998pt}
+\usepackage{csquotes}
+% --- Typographie ---
+\usepackage{lmodern}
+\usepackage{microtype}
+
+% --- Mathématiques ---
+\usepackage{amsmath, amssymb}
+
+% --- Tableaux ---
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{longtable}
+
+% --- Graphiques ---
+\usepackage{graphicx}
+\usepackage{float}
+
+% --- Liens et références ---
+\usepackage[colorlinks=true, linkcolor=black, citecolor=black, urlcolor=blue]{hyperref}
+\usepackage[style=numeric, sorting=nyt, backend=biber]{biblatex}
+\addbibresource{references.bib}
+
+% --- En-têtes ---
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\fancyhf{}
+\rhead{Rapport de Stage --- Master MIX 1\textsuperscript{ère} année}
+\lhead{Matthieu Durand}
+\cfoot{\thepage}
+
+% --- Titre ---
+\title{
+    \vspace{2cm}
+    \Large\textbf{La Rochelle Université} \\[0.3cm]
+    \large Master (MIX) --- 1\textsuperscript{ère} année \\[1.5cm]
+    \rule{\linewidth}{0.5mm} \\[0.4cm]
+    {\LARGE \textbf{Prédiction de l'issue de matchs de football par apprentissage automatique}} \\[0.3cm]
+    \rule{\linewidth}{0.5mm} \\[1.5cm]
+    \large Rapport de Stage \\[2cm]
+}
+\author{
+    \textbf{Stagiaire :} Matthieu Durand \\[0.5cm]
+    \textbf{Tuteurs :} \\
+    M. Essoham Ali, Maître de Conférence \\
+    Institut de Mathématiques Appliquées d'Angers \\[0.3cm]
+    M. Christophe Saint-Jean, Maître de Conférence \\
+    La Rochelle Université
+}
+\date{}
+
+% ============================================================
+\begin{document}
+
+\maketitle
+\newpage
+
+\tableofcontents
+\newpage
+
+% ============================================================
+
+% ============================================================
+\chapter{Introduction}
+
+Ce stage s'est déroulé à l'Institut de Mathématiques Appliquées d'Angers, encadré 
+par M. Essoham Ali. L'objectif était de mettre en application des modèles étudiés 
+durant l'année de Master afin de prédire l'issue de matchs de football. La démarche est la suivante :
+récupération des données, nettoyage, calculs des descripteurs en veillant  à l'absence de 
+\textit{data leakage}\footnote{En statistiques et en apprentissage automatique, le 
+\textit{data leakage} désigne l'utilisation lors de l'entraînement d'un modèle 
+d'informations qui ne seraient pas disponibles au moment de la prédiction.}, puis 
+implémentation de modèles de classification.
+
+% ============================================================
+\section{État de l'art}
+\label{sec:art}
+
+% La phase initiale a été consacrée à une étude approfondie de la littérature sur 
+% la modélisation prédictive dans le football. Cette revue s'articule autour de 
+% trois axes principaux, marquant l'évolution des techniques de la statistique 
+% classique vers le Machine Learning.
+
+La prédiction de l'issue de matchs de football est un problème traité par de 
+nombreuses personnes, tant par des passionné de foot, que des parieurs aguéri mais aussi 
+par des statisticiens. L'un des premiers résultats majeur dans ce domaine est initié par 
+Maher \cite{maher}, lorsqu'il expose le fait que les buts marqués lors de rencontres 
+de football peut être simulé par un loi Poisson prenant comme paramètres la force 
+d'attaque et de défense des équipes.
+
+\subsection{Approche statistique classique}
+
+Les travaux de Maher \cite{maher} ont posé les fondements de la modélisation 
+du football en supposant que les buts marqués suivent des lois de Poisson 
+indépendantes. Dixon et Coles \cite{dixon} ont prolongé cette approche 
+en introduisant deux améliorations majeures, la correction de la dépendance via l'ajout 
+d'un facteur multiplicatif $\tau$ pour corriger la sous-représentation des faibles 
+scores ($0-0, 1-0, 0-1, 1-1$) dans les modèles de Poisson standards, et 
+Pondération temporelle par l'intégration d'une fonction de pondération décroissante 
+$\phi(t-t_k)$ permettant de donner plus d'importance aux résultats récents et 
+de suivre la dynamique de performance des équipes.
+
+Bien que très interprétable grâce aux paramètres d'attaque ($\alpha$) et de 
+défense ($\beta$), cette approche reste limitée par l'absence de variables 
+contextuelles (blessures, cartons) et une sensibilité au choix du paramètre de pondération.
+
+\subsection{Comparaison des paradigmes de modélisation}
+
+Egidi et Torelli \cite{egidi} enrichissent l'analyse en comparant, via une 
+approche bayésienne, deux types de modèles. Dans un premier temps Result-based par 
+une modélisation multinomiale de l'issue (1, X, 2) utilisant des modèles probit
+\footnote{Le modèle probit utilise la fonction de répartition de la loi normale 
+centrée réduite pour modéliser la probabilité d'un événement binaire ou multinomial.} 
+ou logit\footnote{Le modèle logit transforme les probabilités (comprises entre 0 et 1) 
+en valeurs réelles via la fonction log-odds ($ln(p/(1-p)$), facilitant ainsi les calculs 
+en inférence bayésienne.}. 
+Cette approche est particulièrement pertinente lors des phases finales de tournois où 
+les écarts de niveau sont faibles, bien qu'elle ignore l'ampleur des scores 
+(ex: une victoire 5-0 est traitée comme un 1-0). Puis, Goal-based,ici la modélisation 
+est basée sur une loi de Poisson bivariée permettant d'inclure un paramètre de 
+dépendance ($\lambda_3$) entre les buts. Elle s'avère plus efficace lorsque 
+les écarts de niveau sont élevés.
+
+
+L'utilisation de l'inférence par chaînes de Markov de Monte Carlo (MCMC) permet 
+une quantification précise de l'incertitude, bien qu'elle nécessite des ressources 
+de calcul importantes par rapport au maximum de vraisemblance.
+
+\subsection{Apprentissage automatique supervisé}
+
+Carloni \textit{et al.} \cite{carloni} ainsi que Fátima Rodrigues et Ângelo Pinto \cite{rodrigues} explorent le potentiel des algorithmes 
+d'apprentissage supervisé (KNN, SVM, Random Forest, Naive Bayes) et des réseaux 
+de neurones artificiels (ANN) à quatre couches. Contrairement aux approches 
+précédentes, ces modèles ne nécessitent aucune hypothèse a priori sur la 
+distribution des buts. 
+Leur méthodologie repose sur un nettoyage rigoureux des données (réduction de 
+47 à 31 variables) et l'utilisation de la \textit{prediction accuracy} et du 
+retour sur investissement (ROI) comme métriques de performance. Bien que l'ANN 
+soit identifié comme le modèle le plus performant (avec un ROI de 26\% sur un 
+échantillon test), ces modèles souffrent d'un manque d'explicabilité et d'une 
+sensibilité au découpage des données (\textit{train/test split}), qui peut ne 
+pas respecter la chronologie des matchs.
+% ============================================================
+% chapitre 2
+\input{donnees/donnees}
+
+% ============================================================
+\input{feature/selection.tex}
+
+% ============================================================
+\input{modele/modeles.tex}
+\input{modele/stat.tex}
+
+% ============================================================
+\input{metrique/metrique.tex}
+
+
+
+
+% ============================================================
+% \section{Conclusion}
+
+% Ce stage a permis de constituer un pipeline solide pour la prédiction de 
+% l'issue de matchs de football, depuis la collecte de données sur dix saisons 
+% et cinq championnats jusqu'à la construction de 53 descripteurs métier. Une 
+% attention particulière a été portée à l'absence de \textit{data leakage}, 
+% notamment par la suppression des cotes de bookmakers et la construction de 
+% variables en fenêtre glissante strictement antérieures au match. Ce socle 
+% prépare l'implémentation et la comparaison de modèles de classification supervisée.
+
+% ============================================================
+\newpage
+\nocite{*}
+\printbibliography[title={Bibliographie}]
+
+\end{document}

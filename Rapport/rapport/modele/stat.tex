@@ -1,0 +1,165 @@
+\chapter{Approche statistique}
+\section{Modèle de Poisson -- Maher (1982)}
+
+La loi de Poisson repose sur l'hypothèse que la possession du ballon se transforme 
+en but avec une probabilité $p$ faible, mais que le nombre d'occasions est élevé. 
+Sous ces conditions, le nombre de buts suit asymptotiquement une loi de Poisson.
+On notera que la loi binomiale négative constitue une alternative plus flexible, 
+capable de modéliser la surdispersion éventuelle des scores, mais nous retenons 
+ici la loi de Poisson conformément à Maher (1982)\cite{maher}.\\
+
+\noindent On note $i$ l'équipe domicile et $j$ l'équipe extérieure. Le couple de 
+scores $(x_{ij}, y_{ij})$ est modélisé comme suit : $X_{ij}$ suit une loi de Poisson 
+de moyenne $\alpha_i \beta_j$, $Y_{ij}$ suit une loi de Poisson de moyenne 
+$\gamma_i \delta_j$, et $X_{ij}$ et $Y_{ij}$ sont supposés indépendants. 
+Les paramètres ont l'interprétation suivante : $\alpha_i$ représente la force 
+d'attaque de l'équipe $i$ à domicile, $\beta_j$ la faiblesse défensive de l'équipe 
+$j$ à l'extérieur, $\gamma_i$ la faiblesse défensive de $i$ à domicile, et $\delta_j$ 
+la force d'attaque de $j$ à l'extérieur.\\
+
+\noindent Pour assurer l'identifiabilité du modèle, on impose les contraintes :
+\[
+\sum_i \alpha_i = \sum_i \beta_i \qquad \text{et} \qquad \sum_i \gamma_i = \sum_i \delta_i
+\]
+car les produits $\alpha_i \beta_j$ et $\gamma_i \delta_j$ sont invariants par 
+reéchelonnage simultané des deux facteurs.\\
+
+\noindent La log-vraisemblance pour les buts à domicile s'écrit :
+\[
+\log L(\underline{\alpha}, \underline{\beta}) = \sum_{i} \sum_{j \neq i} 
+\left( -\alpha_i \beta_j + x_{ij} \log(\alpha_i \beta_j) - \log(x_{ij}!) \right)
+\]
+
+Les conditions du premier ordre donnent :
+\[
+\frac{\partial \log L}{\partial \alpha_i} = \sum_{j \neq i} 
+\left( -\beta_j + \frac{x_{ij}}{\alpha_i} \right) = 0
+\]
+
+d'où les estimateurs du maximum de vraisemblance $\hat{\alpha}_i$ et $\hat{\beta}_j$ 
+vérifient le système implicite :
+\[
+\hat{\alpha}_i = \frac{\sum_{j \neq i} x_{ij}}{\sum_{j \neq i} \hat{\beta}_j}
+\qquad \text{et} \qquad
+\hat{\beta}_j = \frac{\sum_{i \neq j} x_{ij}}{\sum_{i \neq j} \hat{\alpha}_i}
+\]
+
+Ce système peut être résolu par Newton-Raphson, ce qui conduit à l'approximation :
+\[
+\hat{\alpha}_i = \frac{\sum_{j \neq i} x_{ij}}{\sqrt{S_x}}, \qquad
+\hat{\beta}_j = \frac{\sum_{i \neq j} x_{ij}}{\sqrt{S_x}}, \qquad
+S_x = \sum_i \sum_{j \neq i} x_{ij}
+\]
+où $S_x$ désigne le nombre total de buts marqués à domicile sur l'ensemble des matchs.
+Les paramètres $\hat{\gamma}_i$ et $\hat{\delta}_j$ sont estimés de façon analogue 
+à partir des $y_{ij}$.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Adaptation en rolling strict et Lissage Bayésien}
+
+Dans la formulation originale de Maher (1982), les paramètres sont estimés de 
+manière statique sur l'ensemble de la saison. Cette approche introduit un 
+\textit{data leakage} majeur, car des informations chronologiquement futures sont 
+utilisées pour prédire des matchs passés. De plus, la normalisation historique par 
+$\sqrt{S_x}$ entraîne un effondrement mathématique des paramètres au fil du temps, ce 
+dénominateur croissant indéfiniment avec le nombre total de matchs joués dans la ligue.
+
+Pour remédier à ces limites, nous adoptons un calcul en \textit{rolling strict} : à 
+l'instant du match $t$, les paramètres sont estimés uniquement à partir des données 
+des matchs joués strictement avant $t$. Afin de stabiliser ces estimations 
+face au problème d'absence ou trop faible volume d'historique en début de saison, 
+un lissage bayésien (Bayesian smoothing) est appliqué. 
+Ce lissage combine les performances intrinsèques de l'équipe avec un prior 
+global, modélisé par la moyenne glissante de la ligue calculée jusqu'à l'instant $t$. 
+
+De surcroît, pour éviter que les valeurs de $\alpha, \beta$ et $\gamma, \delta$ 
+n'explosent chaque coefficients est divisé par la moyenne de la ligue en cours 
+
+Pour un match opposant l'équipe $i$ (à domicile) à l'équipe $j$ (à l'extérieur) à 
+l'instant $t$, les quatre coefficients de force sont définis par :
+
+\[
+\alpha_i^{(t)} = \frac{X_i^{(t)} + K \cdot \bar{\mu}_{\text{ligue}}^{(t)}}
+{n_i^{(t)} + K} \cdot \frac{1}{\bar{\mu}_{\text{ligue}}^{(t)}}
+\]
+
+\[
+\delta_i^{(t)} = \frac{Y_i^{(t)} + K \cdot \bar{\nu}_{\text{ligue}}^{(t)}}
+{n_i^{(t)} + K} \cdot \frac{1}{\bar{\nu}_{\text{ligue}}^{(t)}}
+\]
+
+\[
+\beta_j^{(t)} = \frac{Y_j^{(t)} + K \cdot \bar{\mu}_{\text{ligue}}^{(t)}}
+{m_j^{(t)} + K} \cdot \frac{1}{\bar{\mu}_{\text{ligue}}^{(t)}}
+\]
+
+\[
+\gamma_j^{(t)} = \frac{X_j^{(t)} + K \cdot \bar{\nu}_{\text{ligue}}^{(t)}}
+{m_j^{(t)} + K} \cdot \frac{1}{\bar{\nu}_{\text{ligue}}^{(t)}}
+\]
+
+Où :
+\begin{itemize}
+    \item $X_i^{(t)}$ et $Y_i^{(t)}$ représentent respectivement le cumul des 
+    buts marqués et encaissés à domicile par l'équipe $i$ avant le match $t$.
+    \item $X_j^{(t)}$ et $Y_j^{(t)}$ représentent respectivement le cumul des 
+    buts marqués et encaissés à l'extérieur par l'équipe $j$ avant le match $t$.
+    \item $n_i^{(t)}$ et $m_j^{(t)}$ désignent le nombre de matchs joués avant
+     $t$, respectivement à domicile par $i$ et à l'extérieur par $j$.
+    \item $\bar{\mu}_{\text{ligue}}^{(t)}$ et $\bar{\nu}_{\text{ligue}}^{(t)}$ sont 
+    les moyennes mobiles des buts marqués par match dans l'ensemble de la ligue 
+    (respectivement à domicile et à l'extérieur) calculées sur l'historique strict 
+    pré-$t$.
+    \item $K$ est l'hyperparamètre de lissage, fixé ici à $K = 5$. Il fait office 
+    de force de rappel en simulant l'équivalent de 5 matchs fictifs aux performances 
+    moyennes, ce qui s'accorde de manière cohérente avec la fenêtre glissante 
+    utilisée lors du prétraitement des données.
+\end{itemize}
+
+Les espérances de buts finales ($\mu^{(t)}$ pour l'équipe à domicile et $\nu^{(t)}$ 
+pour l'équipe à l'extérieur) utilisées pour alimenter les lois de Poisson 
+indépendantes sont alors réajustées par l'avantage moyen du terrain et s'écrivent :
+\[
+\mu^{(t)} = \alpha_i^{(t)} \cdot \beta_j^{(t)} \cdot \bar{\mu}_{\text{ligue}}^{(t)} 
+\qquad \text{et} \qquad \nu^{(t)} = \gamma_j^{(t)} \cdot \delta_i^{(t)} \cdot 
+\bar{\nu}_{\text{ligue}}^{(t)}
+\]
+Cette formulation garantit que $\mu^{(t)}$ et $\nu^{(t)}$ conservent rigoureusement 
+leur signification physique d'espérances de buts par match à l'instant $t$, tout en 
+éliminant les anomalies sur les scores extrêmes.
+
+\subsection{Métrique pour poisson}
+Erreur Quadratique Moyenne : $MSE = \frac{1}{n} \sum(y - \hat{y})^2$
+
+
+L'Erreur Quadratique Moyenne (MSE) mesure la moyenne des carrés des écarts entre les 
+valeurs prédites et les valeurs réelles. 
+En élevant au carré les erreurs de prédiction, la MSE accorde une plus grande 
+importance aux erreurs plus importantes. Cette propriété la rend particulièrement 
+utile dans des contextes où les grandes erreurs doivent être évitées à tout prix.\\
+
+
+Erreur Absolue Moyenne (MAE) :
+$MAE= \frac{1}{n} \sum|y - \hat{y}|$ 
+
+L'Erreur Absolue Moyenne (MAE) est une métrique qui mesure, en moyenne, la 
+magnitude des erreurs entre les valeurs prédites par le modèle et les valeurs 
+réelles observées, sans tenir compte de la direction de l'erreur. 
+La MAE est appréciée pour sa simplicité et son interprétation intuitive. Elle donne 
+une estimation directe de l'erreur moyenne sur l'ensemble des prédictions. Étant 
+donné qu'elle utilise la valeur absolue des erreurs, elle est robuste face aux 
+valeurs aberrantes, contrairement à d'autres métriques qui amplifient les erreurs.\\
+
+mean\_poisson\_deviance\\
+Pour une observation :
+\[
+D(y, \hat{y}) = 2 \left( y \log\left(\frac{y}{\hat{y}}\right) - (y - \hat{y}) \right)
+\]
+Pour $n$ observations :
+\[
+\text{mean\_poisson\_deviance} = \frac{1}{n} \sum_{i=1}^{n} 2 \left( y_i \log\left(\frac{y_i}{\hat{y}_i}\right) - (y_i - \hat{y}_i) \right)
+\]
+
+Cette formule mesure l'erreur entre les valeurs réelles $y$ et les prédictions 
+$\hat{y}$ pour des données de comptage (0,1,2,\dots). Plus la valeur est petite, 
+meilleur est le modèle.

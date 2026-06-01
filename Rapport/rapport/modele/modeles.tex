@@ -1,0 +1,92 @@
+\chapter{Modèles}
+\label{chap:modeles}
+
+\section{Implémentation des modèles}
+\label{sec:modeles}
+
+Dans cette section, nous détaillons l'Implémentation des différents modèles. 
+Plusieurs approches seront comparées, en cohérence avec la littérature recensée, une 
+approche statistiques (régression logistique), ensemblistes (Random Forest, Gradient 
+Boosting). Enfin, une approche par réseau de neurones, comme explorés par Carloni 
+\textit{et al.}\cite{carloni}.
+
+
+Les performances seront évaluées sur un ensemble de test chronologique 
+(saisons les plus récentes) afin d'éviter tout biais temporel, en utilisant 
+des métriques adaptées : F1-score \ref{sec:f1}, Brier-Score \ref{sec:BS}, log-loss 
+\ref{sec:log-loss} et ROI \ref{sec:roi}, que nous détaillerons dans \ref{chap:métriques}.
+
+\subsection{Baseline}
+
+En observant notre jeu de données, il est aisé de constater que prédire uniquement la 
+victoire à domicile permet d'obtenir 45\% de bonne prédiction. Notre objectif est donc 
+de dépasser ce seuil. 
+ 
+
+\subsection{Régression Logistique}
+
+La Régression Logistique constitue notre premier modèle de référence parmi les 
+approches statistiques linéaires. Bien que simple, elle est particulièrement 
+adaptée à la classification binaire (victoire à domicile vs. non-victoire). 
+L'un de ses principaux atouts réside dans sa capacité à fournir des probabilités 
+directement exploitables facilitant le calcul du ROI \ref{sec:roi}. 
+
+Afin de maximiser ses performances, nous comparons une version dite de Base avec une 
+version optimisée par Random Search\footnote{Le Random Search sélectionne au hasard des 
+combinaisons d'hyperparamètres dans des plages prédéfinies afin de trouver la configuration 
+la plus performante.}. 
+
+
+\subsection{Random Forest}
+
+Le Random Forest introduit une approche non linéaire basée sur le principe du Bagging 
+combinant un grand nombre d'arbres de décision 
+indépendants entraînés sur des sous-échantillons de données (bootstrap).
+
+Dans notre pipeline, le Random Forest utilise des poids de classes équilibrés 
+(class weight) pour compenser le déséquilibre initial du dataset (la victoire 
+à domicile représentant 45\,\% des observations).
+Nous comparons une version de base et une version 
+optimisée par Random Search, portant sur le nombre d'arbres et la profondeur maximale. 
+
+\subsection{XGBoost}
+
+L'algorithme XGBoost (Extreme Gradient Boosting) représente l'état de l'art des 
+méthodes ensemblistes par Boosting. Contrairement au Random Forest, les arbres 
+de décision sont construits de manière séquentielle : chaque nouvel arbre est 
+entraîné pour corriger les erreurs de prédiction (les résidus) commises par les 
+précédents.
+
+Nous implémentons une version de base et une version 
+optimisée par Random Search. Pour cette dernière, l'optimisation des hyperparamètres 
+(profondeur des arbres, taux d'apprentissage \textit{learning rate}, et paramètres 
+de régularisation $L_1$/$L_2$) est couplée à une validation croisée temporelle, 
+garantissant la robustesse des prédictions sur les saisons futures.
+
+\subsection{SVM (Support Vector Machine)}
+
+Le SVM à noyau de fonction de base radiale (RBF) adopte une approche géométrique. 
+Il projette notre espace de caractéristiques de forme et de classement dans une 
+dimension supérieure afin de trouver l'hyperplan de séparation optimal à marge 
+maximale entre les matchs gagnés et perdus.
+
+Le noyau RBF est très efficace lorsque la frontière de décision est fortement 
+non linéaire. Cependant, le SVM ne fournit pas nativement de probabilités, mais 
+des scores de distance à l'hyperplan. Pour intégrer ce modèle nous activons la méthode 
+de calibration de Platt (\texttt{probability=True}), 
+convertissant ces scores en probabilités. Cela nous permet d'évaluer la fiabilité 
+de ses prédictions au même titre que les autres algorithmes.
+
+\subsection{LightGBM}
+
+Enfin, nous avons également utilisé LightGBM \cite{chenlgbm} 
+(Light Gradient Boosting Machine), c'est une déclinaison optimisée 
+du Gradient Boosting développée par Microsoft. Sa spécificité 
+repose sur une croissance des arbres par feuille 
+(leaf-wise) plutôt que par niveau (level-wise), ce qui lui confère une 
+vitesse de convergence supérieure et une excellente gestion des interactions 
+de variables à grande échelle.
+
+
+
+\subsection{Réseau de neurones}
