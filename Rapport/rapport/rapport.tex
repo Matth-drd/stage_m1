@@ -82,7 +82,7 @@ récupération des données, nettoyage, calculs des descripteurs en veillant  à
 \textit{data leakage}\footnote{En statistiques et en apprentissage automatique, le 
 \textit{data leakage} désigne l'utilisation lors de l'entraînement d'un modèle 
 d'informations qui ne seraient pas disponibles au moment de la prédiction.}, puis 
-implémentation de modèles de classification.
+implémentation de modèles.
 
 % ============================================================
 \section{État de l'art}
@@ -93,9 +93,9 @@ implémentation de modèles de classification.
 % trois axes principaux, marquant l'évolution des techniques de la statistique 
 % classique vers le Machine Learning.
 
-La prédiction de l'issue de matchs de football est un problème traité par de 
-nombreuses personnes, tant par des passionné de foot, que des parieurs aguéri mais aussi 
-par des statisticiens. L'un des premiers résultats majeur dans ce domaine est initié par 
+La prédiction de l'issue de matchs de football est un problème traité par un grand nombre de personnes, 
+tant par des passionnés de foot, que des parieurs aguerris mais aussi 
+par des statisticiens. L'un des premiers résultats majeurs dans ce domaine est initié par 
 Maher \cite{maher}, lorsqu'il expose le fait que les buts marqués lors de rencontres 
 de football peut être simulé par un loi Poisson prenant comme paramètres la force 
 d'attaque et de défense des équipes.
@@ -107,16 +107,16 @@ du football en supposant que les buts marqués suivent des lois de Poisson
 indépendantes. Dixon et Coles \cite{dixon} ont prolongé cette approche 
 en introduisant deux améliorations majeures, la correction de la dépendance via l'ajout 
 d'un facteur multiplicatif $\tau$ pour corriger la sous-représentation des faibles 
-scores ($0-0, 1-0, 0-1, 1-1$) dans les modèles de Poisson standards, et 
-Pondération temporelle par l'intégration d'une fonction de pondération décroissante 
+scores ($0-0, 1-0, 0-1, 1-1$) dans les modèles de Poisson standards, et une 
+pondération temporelle par l'intégration d'une fonction de pondération décroissante 
 $\phi(t-t_k)$ permettant de donner plus d'importance aux résultats récents et 
 de suivre la dynamique de performance des équipes.
 
-Bien que très interprétable grâce aux paramètres d'attaque ($\alpha$) et de 
+\noindent Bien que très interprétable grâce aux paramètres d'attaque ($\alpha$) et de 
 défense ($\beta$), cette approche reste limitée par l'absence de variables 
 contextuelles (blessures, cartons) et une sensibilité au choix du paramètre de pondération.
 
-\subsection{Comparaison des paradigmes de modélisation}
+\subsection{Comparaison des modélisations}
 
 Egidi et Torelli \cite{egidi} enrichissent l'analyse en comparant, via une 
 approche bayésienne, deux types de modèles. Dans un premier temps Result-based par 
@@ -124,21 +124,21 @@ une modélisation multinomiale de l'issue (1, X, 2) utilisant des modèles probi
 \footnote{Le modèle probit utilise la fonction de répartition de la loi normale 
 centrée réduite pour modéliser la probabilité d'un événement binaire ou multinomial.} 
 ou logit\footnote{Le modèle logit transforme les probabilités (comprises entre 0 et 1) 
-en valeurs réelles via la fonction log-odds ($ln(p/(1-p)$), facilitant ainsi les calculs 
+en valeurs réelles via la fonction log-odds $ln(p/(1-p)$), facilitant ainsi les calculs 
 en inférence bayésienne.}. 
 Cette approche est particulièrement pertinente lors des phases finales de tournois où 
 les écarts de niveau sont faibles, bien qu'elle ignore l'ampleur des scores 
-(ex: une victoire 5-0 est traitée comme un 1-0). Puis, Goal-based,ici la modélisation 
+(ex: une victoire 5-0 est traitée comme un 1-0). Puis, Goal-based, ici la modélisation 
 est basée sur une loi de Poisson bivariée permettant d'inclure un paramètre de 
 dépendance ($\lambda_3$) entre les buts. Elle s'avère plus efficace lorsque 
 les écarts de niveau sont élevés.
 
 
-L'utilisation de l'inférence par chaînes de Markov de Monte Carlo (MCMC) permet 
+\noindent L'utilisation de l'inférence par chaînes de Markov de Monte Carlo (MCMC) permet 
 une quantification précise de l'incertitude, bien qu'elle nécessite des ressources 
 de calcul importantes par rapport au maximum de vraisemblance.
 
-\subsection{Apprentissage automatique supervisé}
+\subsection{Apprentissage automatique}
 
 Carloni \textit{et al.} \cite{carloni} ainsi que Fátima Rodrigues et Ângelo Pinto \cite{rodrigues} explorent le potentiel des algorithmes 
 d'apprentissage supervisé (KNN, SVM, Random Forest, Naive Bayes) et des réseaux 

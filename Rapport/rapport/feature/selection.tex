@@ -2,36 +2,184 @@
 
 Dans ce chapitre, nous expliquons quelles caractéristiques (features) 
 sont conservées, et quelles méthodes ont été utiliser pour les choisir. Nous abordons 
-également l'étape de Visualisation de nos données.
+également l'étape de visualisation de nos données.
 
-\section{Sélection}
+\section{Sélection des descripteurs}
+%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%
+Nous avons appliqué trois méthodes complémentaires --- RFECV, ANOVA (\texttt{SelectKBest} avec $f\_classif$) 
+et Information Mutuelle (\texttt{SelectKBest}
+avec \texttt{mutual\_info\_classif}) --- sur la même cible binaire \texttt{Hvs}, afin de
+conserver uniquement les descripteurs sélectionnés par les trois méthodes simultanément.
+Cette intersection garantit que les features retenues sont pertinentes. L'ensemble
+des méthodes est appliqué après standardisation des données par \texttt{StandardScaler}.
+
 \subsection{RFECV}
 
-\subsection{ACP}
+La méthode RFECV (\textit{Recursive Feature Elimination with Cross-Validation}) sélectionne 
+les descripteurs en se basant sur les
+performances d'un modèle sous-jacent, ici une Régression Logistique. Son principe est
+le suivant : à chaque itération, le descripteur le moins important (selon le coefficient du
+modèle) est supprimé, et le score $F_1$ est réévalué par validation croisée à 5 plis. Le
+nombre optimal de descripteurs est celui qui maximise ce score. Cette méthode tient donc
+compte des interactions entre variables.
 
-\subsection{SelectKBest}
+Appliquée à nos $61$ descripteurs initiaux avec \texttt{step=1} et \texttt{cv=5}, la
+RFECV retient $34$ descripteurs. Parmi eux, on retrouve notamment les scores Elo
+(\texttt{FT\_Elo\_H}, \texttt{FT\_Elo\_A}, \texttt{FT\_Elo\_dif}), les indicateurs de
+forme (\texttt{FT\_Hforme}, \texttt{FT\_Aforme}), ainsi que plusieurs indicateurs de
+précision (\texttt{FT\_prec\_diff}, \texttt{FT\_prec\_ratio}).
 
-% \section{f\_classif}
+\subsection{ANOVA --- \texttt{SelectKBest} avec f\_classif}
 
-% \section{mutual\_info\_classif}
+L'ANOVA (\textit{Analysis of Variance}) est une méthode qui mesure la
+dépendance linéaire entre chaque descripteur et la variable cible. Pour chaque variable
+$X_k$, la statistique $F$ est définie par :
 
+\begin{equation}
+    F_k = \frac{\text{variance inter-classes}}{\text{variance intra-classes}}
+    = \frac{\sum_c n_c (\bar{X}_{k,c} - \bar{X}_k)^2 / (C-1)}
+           {\sum_c \sum_{i \in c} (X_{k,i} - \bar{X}_{k,c})^2 / (N-C)}
+\end{equation}
+
+où $C$ est le nombre de classes, $n_c$ le nombre d'observations de la classe $c$, $N$ le
+nombre total d'observations, $\bar{X}_{k,c}$ la moyenne du descripteur $k$ dans la classe
+$c$, et $\bar{X}_k$ la moyenne globale. Un score $F$ élevé indique que le descripteur
+discrimine bien les classes. Le paramètre $k$ est fixé au nombre de descripteurs retenu
+par la RFECV ($k = 34$) afin de rendre les méthodes comparables.
+
+L'ANOVA retient $34$ descripteurs, parmi lesquels les scores Elo, les indicateurs de
+forme, de force offensive et défensive (\texttt{FT\_att\_diff}, \texttt{FT\_def\_ratio}),
+ainsi que les variables de classement (\texttt{H\_Rank}, \texttt{A\_Rank},
+\texttt{Rank\_diff}) et les séries de victoires (\texttt{H\_WinStreak},
+\texttt{WinStreak\_diff}).
+
+\subsection{Information Mutuelle -- \texttt{mutual\_info\_classif}}
+
+L'information mutuelle (IM) est une méthode non paramétrique qui mesure
+la dépendance statistique entre un descripteur $X_k$ et la variable cible $Y$, sans supposer
+de relation linéaire. Elle est définie par :
+
+\begin{equation}
+    I(X_k ; Y) = \sum_{x,y} p(x,y) \log \frac{p(x,y)}{p(x)\,p(y)}
+\end{equation}
+
+$I(X_k ; Y) = 0$ si et seulement si $X_k$ et $Y$ sont indépendants ; plus la valeur est
+élevée, plus le descripteur est informatif. Contrairement à l'ANOVA, l'IM capture les
+relations non linéaires entre descripteurs et cible, ce qui la rend complémentaire à
+l'approche précédente. Le paramètre $k$ est identique à celui de l'ANOVA ($k = 34$).
+
+L'information mutuelle retient $34$ descripteurs, avec une composition légèrement
+différente : on y retrouve les séries de défaites (\texttt{A\_WinStreak}), les indicateurs
+de précision pondérée (\texttt{FT\_Aprec\_weight}, \texttt{FT\_Hprec\_weight}) et les
+différences de fautes (\texttt{FT\_avgF\_diff}), qui ne figuraient pas dans la liste ANOVA.
+
+\subsection{Intersection et features retenues}
+
+Les $20$ descripteurs communs aux trois méthodes sont retenus pour les modèles de
+classification :
+
+\begin{center}
+\texttt{FT\_Adef}, \texttt{FT\_Aforme}, \texttt{FT\_Elo\_A}, \texttt{FT\_Elo\_H},
+\texttt{FT\_Elo\_dif}, \texttt{FT\_Elo\_ratio}, \texttt{FT\_Hforme},
+\texttt{FT\_forme\_diff}, \texttt{FT\_forme\_ratio}, \texttt{FT\_prec\_diff},
+\texttt{FT\_prec\_ratio}, \texttt{HT\_Elo\_A}, \texttt{HT\_Elo\_H},
+\texttt{HT\_Elo\_dif}, \texttt{HT\_Elo\_ratio}, \texttt{HT\_Hforme},
+\texttt{HT\_def\_ratio}, \texttt{HT\_forme\_diff}, \texttt{HT\_forme\_ratio},
+\texttt{Rank\_diff}.
+\end{center}
+
+La prédominance des scores Elo (6 variables sur 20) et des indicateurs de forme
+(6 variables) confirme que le niveau relatif des équipes et leur dynamique récente
+constituent les signaux prédictifs les plus stables, indépendamment de la méthode de
+sélection utilisée. L'absence de variables de précision brutes (\texttt{FT\_Hprecision},
+\texttt{FT\_Aprecision}) dans l'intersection suggère que ces indicateurs, bien qu'utiles
+séparément, sont redondants avec les différentiels de forme et d'Elo lorsque les trois
+méthodes sont croisées.
+
+
+% % =============================================================================
+\section{Sélection pour le réseau de neurones — méthode ECD}
+% =============================================================================
+
+Pour le réseau de neurones (\texttt{MLPClassifier}), une sélection dédiée est réalisée
+via une procédure d'élimination rétrograde basée sur la saillance ECD (\textit{Early Cell
+Damage}), inspirée des travaux de Leray et Gallinari~\cite{leray}.
+
+% \subsection{Principe de la méthode ECD}
+
+% La méthode ECD évalue l'importance de chaque descripteur en mesurant l'augmentation
+% de la perte engendrée par la suppression du poids associé à la première couche du réseau.
+% Pour un poids $w_{ij}$ reliant l'entrée $i$ à la cellule cachée $j$, la saillance est approchée
+% par un développement de Taylor au second ordre de la perte $L$ :
+
+% \begin{equation}
+%     s_{ij} = \underbrace{\frac{1}{2} h_{ij} \, w_{ij}^2}_{\text{terme OBD}}
+%            \underbrace{- g_{ij} \, w_{ij}}_{\text{terme gradient}}
+%            + \underbrace{\frac{g_{ij}^2}{2 \, h_{ij}}}_{\text{terme correction}}
+% \end{equation}
+
+% où $g_{ij} = \partial L / \partial w_{ij}$ est le gradient et $h_{ij} = \partial^2 L /
+% \partial w_{ij}^2$ le hessien, tous deux estimés par différences finies centrées avec
+% $\varepsilon = 10^{-4}$. La saillance globale du descripteur $i$ est alors :
+
+% \begin{equation}
+%     s_i = \sum_j s_{ij}
+% \end{equation}
+
+% À chaque itération, le descripteur de saillance minimale est supprimé et le réseau est
+% réentraîné. Le réseau utilisé possède deux couches cachées de taille $(16, 8)$ avec arrêt
+% précoce (\texttt{early\_stopping=True}, \texttt{n\_iter\_no\_change=10}), ce qui est
+% cohérent avec le postulat ECD qui suppose un réseau en régime de convergence précoce.
+
+% \subsection{Critère d'arrêt et sélection finale}
+
+% La boucle d'élimination s'arrête lorsque le score $F_1$ sur l'ensemble de validation
+% chute en dessous de $85\%$ du meilleur score observé. La sélection finale applique un
+% principe de \textbf{parcimonie} : parmi tous les modèles dont le $F_1$ de validation est
+% supérieur à $F_1^{\max} - \delta$ (avec $\delta = 0{,}015$, interprété comme une marge de
+% tolérance analogue à un test de Fisher), on retient le modèle le plus parcimonieux, c'est-à-dire
+% celui comportant le moins de descripteurs.
+
+\subsection{Résultat}
+
+La procédure retient $6$ descripteurs pour le réseau de neurones :
+
+\begin{center}
+\texttt{FT\_Aprec\_weight},
+\texttt{FT\_avgY\_diff},
+\texttt{HT\_Elo\_A},
+\texttt{HT\_Elo\_dif},
+\texttt{HT\_Hdef},
+\texttt{WinStreak\_diff}.
+\end{center}
+
+Ces $6$ descripteurs sont en partie distincts des $20$ retenus pour les autres modèles,
+ce qui indique que le réseau de neurones exploite des signaux différents : la précision
+offensive pondérée (\texttt{FT\_Aprec\_weight}), le différentiel de discipline
+(\texttt{FT\_avgY\_diff}) et les séries de victoires (\texttt{WinStreak\_diff})
+apparaissent comme les signaux les plus discriminants pour cette architecture.
+L'intersection des deux listes de descripteurs est vide, ce qui confirme la complémentarité
+des deux approches de sélection.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \section{Visualisation}
-Suite à cette étape de sélections, nous avons choisis de conserver les déscripteurs communs 
-aux trois méthode RFECV, ANOVA et mutual information, ansin 20 déscripteurs sont 
+Suite à cette étape de sélections, nous avons choisis de conserver les descripteurs communs 
+aux trois méthode RFECV, ANOVA et mutual information, ainsi, 20 descripteurs sont 
 conservées pour les modèles de classification: 
 
 \noindent ['FT\_Adef', 'FT\_Aforme', 'FT\_Elo\_A', 'FT\_Elo\_H', 'FT\_Elo\_dif', 'FT\_Elo\_ratio', 'FT\_Hforme', 'FT\_forme\_diff',
 'FT\_forme\_ratio', 'FT\_prec\_diff', 'FT\_prec\_ratio', 'HT\_Elo\_A', 'HT\_Elo\_H', 'HT\_Elo\_dif', 'HT\_Elo\_ratio',
 'HT\_Hforme', 'HT\_def\_ratio', 'HT\_forme\_diff', 'HT\_forme\_ratio', 'Rank\_diff'].
 \newline 
-Une liste de 6 déscripteurs sera sélectionnés pour les réseaux de neurones : 
+Une liste de 6 descripteurs sera sélectionnés pour les réseaux de neurones : 
 
 \noindent ['FT\_Aprec\_weight', 'FT\_avgY\_diff', 'HT\_Elo\_A', 'HT\_Elo\_dif', 'HT\_Hdef', 'WinStreak\_diff'].
 
-A présent, nous allons aborder la Visualisation des données par rapport aux deux listes de 
-déscripteurs. Nous avons utilisé Umap, ACP biplot ainsi que Boxplot afin de projeter 
-differement.
+A présent, nous allons aborder la visualisation des données par rapport aux deux listes de 
+descripteurs. Nous avons utilisé Umap, ACP biplot ainsi que Boxplot afin de visualiser les 
+données de différentes manières.
 
 \subsection{Umap}
 
@@ -58,9 +206,9 @@ Grâce à cette méthode, nous avons projeté nos données en 2 et 3 dimensions.
 \end{figure}
 
 Sur la figure \ref{fig:umap_20} nous avons projeté nos données en utilisant les 
-déscripteurs sélectionnés par RFECV, ANOVA, Mutual information. Au total 20 features 
-sont retenues communes à ces trois méthodes. Sur la figure \ref{fig:umap_6} nous avons 
-projeté en utilisant les déscripteurs retenues grâce au MLP utilisant la méthode ECD 
+descripteurs sélectionnés par RFECV, ANOVA, Mutual information. Sur la figure \ref{fig:umap_6} 
+nous avons 
+projeté en utilisant les descripteurs retenues grâce au MLP utilisant la méthode ECD 
 (basé sur \cite{leray}).
 
 \begin{figure}[H]
@@ -92,7 +240,7 @@ la séparabilité de nos données.
     \begin{minipage}{0.48\textwidth}
         \centering
         \includegraphics[width=\textwidth]{../../../plot/acp_2d_ft_co.png}
-        \caption{acp 2D : 20 features communes.}
+        \caption{ACP 2D : 20 features communes.}
         \label{fig:acpd_2d_20}
     \end{minipage}
     \hfill 
@@ -100,7 +248,7 @@ la séparabilité de nos données.
     \begin{minipage}{0.48\textwidth}
         \centering
         \includegraphics[width=\textwidth]{../../../plot/acp_2d_ft_ecd.png}
-        \caption{acp 2D : 6 features (modèle ECD).}
+        \caption{ACP 2D : 6 features (modèle ECD).}
         \label{fig:acp_3d_6}
     \end{minipage}
 \end{figure}
@@ -117,7 +265,7 @@ la séparabilité de nos données.
 \end{figure}
 
 Nous avons également comparé la séparabilité des classes en utilisant la cible 'Hvs' 
-( Homve versus Rest ). 
+( Home versus Rest ). 
 
 \begin{figure}[H] 
     \centering
@@ -129,3 +277,6 @@ Nous avons également comparé la séparabilité des classes en utilisant la cib
 
 Les figures \ref{fig:Boxplot_20} et \ref{fig:Boxplot_6} montre la différence entre 
 les features sélectionnés.
+
+\noindent Suite à cette étape de visualisation, nous pouvons constater que les données ne sont 
+visiblement pas séparables. Cependant, un certain nombre de matchs restent relativement isolés

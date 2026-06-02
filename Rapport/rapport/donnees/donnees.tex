@@ -6,13 +6,10 @@
 
 \subsection{Source}
 
-Les données ont été extraites du portail \texttt{football-data.co.uk}, couvrant
-dix saisons consécutives (2014--2024) des cinq grands championnats européens :
+Les données ont été extraites du site \texttt{football-data.co.uk}, couvrant
+dix saisons consécutives (2014-2024) des cinq grands championnats européens :
 Premier League (Angleterre), LaLiga (Espagne), SerieA (Italie), Bundesliga
 (Allemagne) et Ligue1 (France). Cela représente donc 17\,786 matchs.
-
-\subsection{Distribution des résultats}
-
 Après nettoyage, la répartition des résultats est la suivante :
 \begin{itemize}
     \item Victoires à domicile : 7\,905 matchs (45\,\%) ;
@@ -20,7 +17,7 @@ Après nettoyage, la répartition des résultats est la suivante :
     \item Victoires à l'extérieur : 4\,461 matchs (30\,\%).
 \end{itemize}
 
-Cette distribution confirme l'avantage du terrain dans le football.
+Cette distribution confirme l'avantage du terrain dans le football abordé par Dixon \& Coles.
 
 \subsection{Structure des données brutes}
 
@@ -56,10 +53,7 @@ Les variables de résultat et de jeu couvrent la fin de match
 % ============================================================
 
 
-\section{Préparation des données}
-\label{sec:prep}
-
-L'étape de préparation a été réalisée sous Python avec la bibliothèque
+\noindent L'étape de préparation a été réalisée sous Python avec la bibliothèque
 \texttt{Pandas}. Elle consiste à transformer les données brutes issues des
 dix saisons et cinq championnats en un dataset exploitable pour l'apprentissage.
 
@@ -81,7 +75,7 @@ statistiques de fin de match (\textit{Full Time}) que de mi-temps (\textit{Half 
 afin de capturer l'état de forme récent.
 
 \paragraph{Précision et efficacité offensive.}
-Le rapport tirs cadrés / tirs tentés mesure la qualité offensive. Une variante
+Le rapport $\frac{\text{tirs cadrés}}{\text{tirs tentés}}$ mesure la qualité offensive. Une variante
 pondérée (\texttt{FT\_prec\_weight}) applique un facteur $w_g = 2$ aux tirs
 convertis en buts (nous considérons qu'un but est deux fois plus important qu'un 
 tire cadré).
@@ -151,7 +145,7 @@ divisions par zéro.
     Elo               & \texttt{XX\_Elo\_H}        & \texttt{XX\_Elo\_A}        & Niveau de puissance avant match \\
     Rank              & \texttt{H\_Rank}         & \texttt{A\_Rank}         & Classement basé sur les points  \\
     Précision         & \texttt{FT\_Hprecision}   & \texttt{FT\_Aprecision}   & Ratio tirs cadrés / tirs totaux \\
-    Efficacité pond.  & \texttt{FT\_Hprec\_weight} & \texttt{FT\_Aprec\_weight} & Précision pondérée ($w_g = 1{,}5$) \\
+    Efficacité pond.  & \texttt{FT\_Hprec\_weight} & \texttt{FT\_Aprec\_weight} & Précision pondérée ($w_g = 12$) \\
     Fautes            & \texttt{FT\_HavgF}        & \texttt{FT\_AavgF}        & Moyenne fautes (5 matchs) \\
     Cartons J.        & \texttt{FT\_HavgY}        & \texttt{FT\_AavgY}        & Moyenne jaunes (5 matchs) \\
     Cartons R.        & \texttt{FT\_HavgR}        & \texttt{FT\_AavgR}        & Moyenne rouges (5 matchs) \\
@@ -183,13 +177,14 @@ base sur un test de Friedman afin de déterminer s'il éxiste ou non des différ
 significative entre les éléments comparer. Une fois ce test réalisé, l'analyse peut 
 avoir lieu. 
 
-\begin{figure}
+\begin{figure}[H]
     \centering 
     \includegraphics[width=0.75\textwidth]{../../plot/cdd.png}
     \caption{Diagram de différences critique entre les bookmaker}
     \label{fig:cdd}
 \end{figure}
-
+\noindent Sur la figure \ref{fig:cdd} le trait noir reliant de couleur signifi, qu'il n'y a pas de différence 
+significative entre les deux bookmakers. 
 
 
 
@@ -206,9 +201,8 @@ trois colonnes cibles binaires sont créées :
     \item \texttt{Dvs} : match nul vs (victoire ou défaite).
 \end{itemize}
 
-Ce découpage permet d'entraîner un classifieur binaire spécialisé pour
-chaque issue, cela permet également de rééquilibrer les classes,
-nous passons d'une distribution 45\% - 25\% - 30\% à 45\% - 55\%.
+Cela permet de rééquilibrer les classes, nous passons d'une distribution 
+45\% - 25\% - 30\% à 45\% - 55\%.
 De plus par la suite, si nous souhaitons entrainer un modèle par cible,
 cela nous permettra si nécessaire de combiner les modèles afin
 d'obtenir une prédiction plus robuste.
@@ -225,50 +219,48 @@ vs Reste ».
     \item \textbf{Test de Friedman :} Nous utilisons ce test
  non-paramétrique pour vérifier s'il existe une différence
  significative globale entre les performances des différents
- acteurs. Le rejet de l'hypothèse nulle ($p < 0,05$) indique
+ bookmakers. Le rejet de l'hypothèse nulle ($p < 0,05$) indique
  qu'au moins un bookmaker se distingue statistiquement des autres.
     \item \textbf{Test Post-hoc de Nemenyi :} Suite au test de Friedman,
  le test de Nemenyi est appliqué pour identifier les paires
- d'acteurs dont les performances diffèrent significativement.
+ de bookmaker dont les performances diffèrent significativement.
  Ce test permet de calculer la \textit{Critical Difference} (CD).
     \item \textbf{Interprétation du CD Diagram :} Sur le diagramme généré,
  la position sur l'axe des abscisses indique le rang moyen (un
  rang proche de 1 étant optimal). Les segments horizontaux relient
- les groupes d'acteurs dont la différence de performance n'est pas
+ les groupes de bookmakers dont la différence de performance n'est pas
  statistiquement significative au seuil $\alpha = 0,05$.
 \end{itemize}
 
-Cette méthodologie permet de situer précisément notre modèle MLP au sein de
-la hiérarchie du marché, en distinguant les gains de performance réels des
-fluctuations aléatoires des données.
 
-\subsubsection{Détails mathématiques et interprétation des p-values}
 
-L'analyse s'appuie sur une hiérarchie de tests statistiques garantissant
-la robustesse des conclusions :
+% \subsubsection{Détails mathématiques et interprétation des p-values}
 
-\begin{enumerate}
-    \item \textbf{Test de Friedman :} Ce test transforme les scores de
-     \textit{Log-Loss} en rangs pour chaque observation. La statistique
- calculée suit approximativement une loi du $\chi^2$. Une \textit
-{p-value} globale inférieure à 0,05 nous permet de rejeter l'hypothèse
- nulle d'équivalence des performances. Ce test est privilégié ici
- car il ne nécessite pas l'hypothèse de normalité des distributions
- de pertes, souvent violée dans les données de paris sportifs.
+% L'analyse s'appuie sur une hiérarchie de tests statistiques garantissant
+% la robustesse des conclusions :
 
-    \item \textbf{Test Post-hoc de Nemenyi :} Ce test effectue des
- comparaisons par paires. Il définit une distance seuil appelée
- \textit{Critical Difference} (CD). Pour chaque paire de bookmakers,
- une \textit{p-value} locale est calculée :
-    \begin{itemize}
-        \item Si $p < 0,05$, l'écart entre les rangs moyens est supérieur à
-     la CD, marquant une supériorité statistique.
-        \item Si $p \geq 0,05$, les acteurs sont regroupés au sein d'une même
-     « clique », matérialisée par un segment horizontal sur le diagramme.
-    \end{itemize}
-\end{enumerate}
+% \begin{enumerate}
+%     \item \textbf{Test de Friedman :} Ce test transforme les scores de
+%      \textit{Log-Loss} en rangs pour chaque observation. La statistique
+%  calculée suit approximativement une loi du $\chi^2$. Une \textit
+% {p-value} globale inférieure à 0,05 nous permet de rejeter l'hypothèse
+%  nulle d'équivalence des performances. Ce test est privilégié ici
+%  car il ne nécessite pas l'hypothèse de normalité des distributions
+%  de pertes, souvent violée dans les données de paris sportifs.
 
-Cette rigueur mathématique permet d'isoler les leaders du marché (ceux situés
-à gauche sans connexions aux acteurs de droite) et de valider si notre modèle
-MLP apporte une valeur ajoutée statistiquement significative par rapport aux
-benchmarks industriels.
+%     \item \textbf{Test Post-hoc de Nemenyi :} Ce test effectue des
+%  comparaisons par paires. Il définit une distance seuil appelée
+%  \textit{Critical Difference} (CD). Pour chaque paire de bookmakers,
+%  une \textit{p-value} locale est calculée :
+%     \begin{itemize}
+%         \item Si $p < 0,05$, l'écart entre les rangs moyens est supérieur à
+%      la CD, marquant une supériorité statistique.
+%         \item Si $p \geq 0,05$, les acteurs sont regroupés au sein d'une même
+%      « clique », matérialisée par un segment horizontal sur le diagramme.
+%     \end{itemize}
+% \end{enumerate}
+
+% Cette rigueur mathématique permet d'isoler les leaders du marché (ceux situés
+% à gauche sans connexions aux acteurs de droite) et de valider si notre modèle
+% MLP apporte une valeur ajoutée statistiquement significative par rapport aux
+% benchmarks industriels.

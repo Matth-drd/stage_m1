@@ -8,7 +8,7 @@ On notera que la loi binomiale négative constitue une alternative plus flexible
 capable de modéliser la surdispersion éventuelle des scores, mais nous retenons 
 ici la loi de Poisson conformément à Maher (1982)\cite{maher}.\\
 
-\noindent On note $i$ l'équipe domicile et $j$ l'équipe extérieure. Le couple de 
+\noindent On note $i$ l'équipe à domicile et $j$ l'équipe extérieure. Le couple de 
 scores $(x_{ij}, y_{ij})$ est modélisé comme suit : $X_{ij}$ suit une loi de Poisson 
 de moyenne $\alpha_i \beta_j$, $Y_{ij}$ suit une loi de Poisson de moyenne 
 $\gamma_i \delta_j$, et $X_{ij}$ et $Y_{ij}$ sont supposés indépendants. 
@@ -22,7 +22,7 @@ la force d'attaque de $j$ à l'extérieur.\\
 \sum_i \alpha_i = \sum_i \beta_i \qquad \text{et} \qquad \sum_i \gamma_i = \sum_i \delta_i
 \]
 car les produits $\alpha_i \beta_j$ et $\gamma_i \delta_j$ sont invariants par 
-reéchelonnage simultané des deux facteurs.\\
+rééchelonnage simultané des deux facteurs.\\
 
 \noindent La log-vraisemblance pour les buts à domicile s'écrit :
 \[
@@ -36,7 +36,7 @@ Les conditions du premier ordre donnent :
 \left( -\beta_j + \frac{x_{ij}}{\alpha_i} \right) = 0
 \]
 
-d'où les estimateurs du maximum de vraisemblance $\hat{\alpha}_i$ et $\hat{\beta}_j$ 
+ainsi, les estimateurs du maximum de vraisemblance $\hat{\alpha}_i$ et $\hat{\beta}_j$ 
 vérifient le système implicite :
 \[
 \hat{\alpha}_i = \frac{\sum_{j \neq i} x_{ij}}{\sum_{j \neq i} \hat{\beta}_j}
@@ -67,13 +67,13 @@ dénominateur croissant indéfiniment avec le nombre total de matchs joués dans
 Pour remédier à ces limites, nous adoptons un calcul en \textit{rolling strict} : à 
 l'instant du match $t$, les paramètres sont estimés uniquement à partir des données 
 des matchs joués strictement avant $t$. Afin de stabiliser ces estimations 
-face au problème d'absence ou trop faible volume d'historique en début de saison, 
+face au problème d'absence ou de trop faible volume d'historique en début de saison, 
 un lissage bayésien (Bayesian smoothing) est appliqué. 
 Ce lissage combine les performances intrinsèques de l'équipe avec un prior 
 global, modélisé par la moyenne glissante de la ligue calculée jusqu'à l'instant $t$. 
 
-De surcroît, pour éviter que les valeurs de $\alpha, \beta$ et $\gamma, \delta$ 
-n'explosent chaque coefficients est divisé par la moyenne de la ligue en cours 
+De plus, pour éviter que les valeurs de $\alpha, \beta$ et $\gamma, \delta$ 
+n'explosent, chaque coefficient est divisé par la moyenne de la ligue en cours 
 
 Pour un match opposant l'équipe $i$ (à domicile) à l'équipe $j$ (à l'extérieur) à 
 l'instant $t$, les quatre coefficients de force sont définis par :
@@ -98,7 +98,7 @@ l'instant $t$, les quatre coefficients de force sont définis par :
 {m_j^{(t)} + K} \cdot \frac{1}{\bar{\nu}_{\text{ligue}}^{(t)}}
 \]
 
-Où :
+où :
 \begin{itemize}
     \item $X_i^{(t)}$ et $Y_i^{(t)}$ représentent respectivement le cumul des 
     buts marqués et encaissés à domicile par l'équipe $i$ avant le match $t$.
@@ -108,8 +108,8 @@ Où :
      $t$, respectivement à domicile par $i$ et à l'extérieur par $j$.
     \item $\bar{\mu}_{\text{ligue}}^{(t)}$ et $\bar{\nu}_{\text{ligue}}^{(t)}$ sont 
     les moyennes mobiles des buts marqués par match dans l'ensemble de la ligue 
-    (respectivement à domicile et à l'extérieur) calculées sur l'historique strict 
-    pré-$t$.
+    (respectivement à domicile et à l'extérieur) calculées sur l'historique strictement 
+    avant $t$.
     \item $K$ est l'hyperparamètre de lissage, fixé ici à $K = 5$. Il fait office 
     de force de rappel en simulant l'équivalent de 5 matchs fictifs aux performances 
     moyennes, ce qui s'accorde de manière cohérente avec la fenêtre glissante 
@@ -125,17 +125,17 @@ indépendantes sont alors réajustées par l'avantage moyen du terrain et s'écr
 \bar{\nu}_{\text{ligue}}^{(t)}
 \]
 Cette formulation garantit que $\mu^{(t)}$ et $\nu^{(t)}$ conservent rigoureusement 
-leur signification physique d'espérances de buts par match à l'instant $t$, tout en 
+leur sens statistique d'espérances de buts par match à l'instant $t$, tout en 
 éliminant les anomalies sur les scores extrêmes.
 
-\subsection{Métrique pour poisson}
+\subsection{Métriques d'évaluation des buts}
 Erreur Quadratique Moyenne : $MSE = \frac{1}{n} \sum(y - \hat{y})^2$
 
 
 L'Erreur Quadratique Moyenne (MSE) mesure la moyenne des carrés des écarts entre les 
 valeurs prédites et les valeurs réelles. 
-En élevant au carré les erreurs de prédiction, la MSE accorde une plus grande 
-importance aux erreurs plus importantes. Cette propriété la rend particulièrement 
+En élevant au carré les erreurs de prédiction, la MSE pénalise les erreurs importantes. 
+Cette propriété la rend particulièrement 
 utile dans des contextes où les grandes erreurs doivent être évitées à tout prix.\\
 
 
@@ -163,3 +163,101 @@ Pour $n$ observations :
 Cette formule mesure l'erreur entre les valeurs réelles $y$ et les prédictions 
 $\hat{y}$ pour des données de comptage (0,1,2,\dots). Plus la valeur est petite, 
 meilleur est le modèle.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Approche statistique de Dixon et Coles}
+Dans la continuité du modèle de Maher, Dixon et Coles ont appliqué une fonction $\tau$ pour gérer 
+les petits scores $x$-$y$ avec $x,y \in \left\{ 0,1 \right\} $.
+\[
+\tau(x, y) = 
+\begin{cases} 
+    1 - \mu \nu \rho & \text{si } x=0, y=0 \\ 
+    1 + \mu \rho     & \text{si } x=0, y=1 \\ 
+    1 + \nu \rho         & \text{si } x=1, y=0 \\ 
+    1 - \rho             & \text{si } x=1, y=1 \\ 
+    1                    & \text{sinon}
+\end{cases}
+\]
+
+\noindent Nous avons ainsi, $$L(\alpha, \beta, \gamma, \delta, \rho) = \tau(x, y, \mu, \nu, \rho) \times 
+\frac{\mu^x e^{-\mu}}{x!} \times \frac{\nu^y e^{-\nu}}{y!}$$
+D'où : $\log L=\log(\tau)+x\log(\mu)-\mu-\log(x!) + y\log(\nu)-\nu-\log(y!)$. 
+Nous cherchons $\rho$ qui maximise cette log-vraisemblance. Nous avons donc, 
+$$\frac{\partial}{\partial\rho}\log L = \frac{\tau'}{\tau} $$ 
+or 
+\[\tau'(x,y)=
+\begin{cases} 
+    - \mu \nu  & \text{si } x=0, y=0 \\ 
+    \mu        & \text{si } x=0, y=1 \\ 
+    \nu        & \text{si } x=1, y=0 \\ 
+    - 1        & \text{si } x=1, y=1 \\ 
+    0          & \text{sinon}
+\end{cases}
+\]
+
+$\rho^*$ vérifie $\partial_\rho \log L(\rho^*) = 0$
+Dans notre cas, étant donné $N$ matchs, nous avons : 
+$$\partial_\rho \log L = \sum_{1}^{N}\frac{\tau'(x_k,y_k)}{\tau(x_k,y_k)}$$
+Autrement dit,
+$$ \partial_\rho \log L =
+\sum_{k \in \{0-0\}} \frac{-\mu_k \nu_k}{1 - \mu_k \nu_k \rho^*} 
++ \sum_{k \in \{0-1\}} \frac{\mu_k}{1 + \mu_k \rho^*} 
++ \sum_{k \in \{1-0\}} \frac{\nu_k}{1 + \nu_k \rho^*} 
++ \sum_{k \in \{1-1\}} \frac{-1}{1 - \rho^*}$$
+
+
+
+\section{Prédiction de l'issue du match}
+
+Comme nous l'avons précisé en introduction de ce rapport, deux prédictions sont majoritaires. L'une basée sur 
+le nombre de buts, l'autre sur l'issue du match. Les modèles statistique implémentés se basent sur le nombre de buts. 
+En effet, la distribution de Poisson décrit l'évolution du nombre de buts. Cependant, les modèles de machine 
+learning utilisés, eux, prédisent l'issue des matchs, nous devons donc effectuer cette transition afin de pouvoir 
+comparer l'approche ML avec l'approche statistique. 
+
+Pour cela, selon Maher, les buts marqués par l'équipe A et par l'équipe B sont indépendants. Par suite, la probabilité 
+$P(X=x, Y=y) = P(X=x) \times P(Y=y)$ ce qui nous permet de construire la matrice $M$ telle que 
+$M_{i,j} = P(X=i, Y=j)$ figure \ref{fig:matricMaher}. Ainsi, la probabilité que l'équipe A gagne correspond à la probabilité qu'elle 
+marque plus de buts que l'équipe B. Autrement dit, la victoire de l'équipe à domicile correspond aux coefficients de 
+la matrice tel que $i>j$. Le match nul correspond à la diagonale, et la victoire extérieur correspond à la matrice triangulaire 
+supérieure $i<j$ figure \ref{fig:matrixMaherSeparation}.
+
+\begin{figure}[H]
+    \centering
+    % --- Minipage Gauche (Matrice de Maher) ---
+    \begin{minipage}[b]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{../../plot/exemple_matrix.png}
+        \caption{Matrice de Maher}
+        \label{fig:matricMaher}
+    \end{minipage}
+    \hfill % Espace élastique pour repousser les deux blocs sur les bords
+    % --- Minipage Droite (Séparation en 3 matrices) ---
+    \begin{minipage}[b]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{../../plot/ex_matrix_DC.png}
+        \caption{Matrice de Dixon \& Coles}
+        \label{fig:matricDC}
+    \end{minipage}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    % --- Image du Haut ---
+    \includegraphics[width=0.85\textwidth]{../../plot/ex_matrix.png}
+    \caption{Modèle de Maher : Séparation en 3 matrices distinctes}
+    \label{fig:matrixMaherSeparation}
+    
+    \vspace{0.5cm} % Ajuste l'espace vertical entre les deux images si besoin
+    
+    % --- Image du Bas ---
+    \includegraphics[width=0.85\textwidth]{../../plot/ex_matrix_DC_2.png}
+    \caption{Modèle de Dixon-Coles : Séparation en 3 matrices distinctes}
+    \label{fig:matrixDCSeparation}
+\end{figure}
+
+Dans le cas de Dixon \& Coles, l'hypothèse d'indépendance n'est pas tout a fait la même dans le cas des score faibles. 
+Pour traiter ce cas, ils ajoutent un facteur $\tau$, la matrice $M$ devient donc : 
+$M_{i,j}=\tau(i,j)\times P(X=i)\times P(Y=j)$.
+
