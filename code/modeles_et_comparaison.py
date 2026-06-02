@@ -5,7 +5,13 @@ PIPELINE DE PRÉDICTION DE MATCHS DE FOOTBALL — MODÈLES DE CLASSIFICATION
 Ce script entraîne et évalue plusieurs modèles de machine learning pour prédire
 l'issue binaire d'un match de football (victoire à domicile ou non).
 
-Dépendances : lightgbm, xgboost, scikit-learn, umap, scipy
+Étapes principales :
+    1. Chargement et préparation des données chronologiques
+    2. Définition et optimisation des modèles (via RandomizedSearchCV)
+    3. Analyse financière : ROI et optimisation des seuils de confiance
+    4. Visualisation des métriques de performance (ROC, PR, Calibration)
+
+Dépendances : lightgbm, xgboost, scikit-learn, umap, seaborn, scipy
 =============================================================================
 """
 
@@ -17,13 +23,15 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import scikit_posthocs as sp
+import seaborn as sns
 import umap
 from scipy.stats import friedmanchisquare, randint, uniform
 from sklearn.calibration import calibration_curve
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import (
-    auc, brier_score_loss, f1_score,
+    auc, brier_score_loss,
+    classification_report, f1_score,
     precision_recall_curve, roc_curve
 )
 from sklearn.model_selection import RandomizedSearchCV, TimeSeriesSplit
@@ -150,8 +158,8 @@ def compute_roi(y_test, y_pred, cotes, mise=MISE_UNITE):
     return roi, int(total_mise), profit_net
 
 
-# %%===========================================================================
-# CHARGEMENT DES DONNÉES
+# %%=============================================================================
+# CHARGEMENT ET PRÉPARATION DES DONNÉES
 # =============================================================================
 
 df = pd.read_csv(DATA_PATH)
@@ -174,6 +182,7 @@ ratio_poids = (
 # DÉFINITION DES MODÈLES ET GRILLES D'HYPERPARAMÈTRES
 # =============================================================================
 
+# Grille de recherche pour la Régression Logistique
 lr_grid = {
     'penalty': ['l1', 'l2'],  # Type de régularisation
     'C': np.logspace(-3, 3, 20),  # Inverse de la force de régularisation
@@ -181,6 +190,7 @@ lr_grid = {
     'tol': [1e-4, 1e-3, 1e-2]  # Tolérance pour le critère de convergence
 }
 
+# Grille de recherche pour XGBoost
 xgb_grid = {
     'n_estimators': randint(50, 350),  # Nombre d'arbres
     'learning_rate': uniform(0.01, 0.2),  # Taux d'apprentissage
@@ -204,8 +214,11 @@ rf_grid = {
     'max_depth': [3, 4, 5, 6],
 }
 
+# Validation croisée temporelle (respecte l'ordre chronologique des matchs)
 cv_tempo = TimeSeriesSplit(n_splits=3)
 
+# Pipeline des modèles : chaque entrée définit le modèle, si un scaler est nécessaire,
+# et si une optimisation RandomizedSearch doit être effectuée.
 models_pipeline = {
     "LogisticRegression (Base)": {
         "instance": LogisticRegression(max_iter=1000, random_state=42, class_weight="balanced"),
@@ -296,7 +309,7 @@ models_pipeline = {
     }
 }
 # %%=============================================================================
-# train
+# ENTRAÎNEMENT ET OPTIMISATION DES MODÈLES
 # =============================================================================
 
 print("\n" + "=" * 70)
@@ -309,6 +322,7 @@ X_train_brut, X_test_brut, y_train, y_test = split_data(X_brut, df[TARGET_BIN])
 X_train_scaled = scaler.fit_transform(X_train_brut)
 X_test_scaled = scaler.transform(X_test_brut)
 
+# Stockage des modèles entraînés et de leurs données de test associées
 trained_models = {}
 
 for name, config in models_pipeline.items():
@@ -367,8 +381,21 @@ print(f"\n BASELINE — Accuracy : {y_test.mean():.1%} | F1 : {f1_baseline:.3f} 
 # =====================================
 # %%=====================================
 
-# Résultats de la recherche du seuil optimal par maximisation du profit
+# Initialisation des structures de stockage
+bilan_data = []
 tuning_resultats = {}
+
+if 'f1_baseline' in locals() or 'f1_baseline' in globals():
+    bilan_data.append({
+        "Modèle": "Baseline",
+        "ROI Std (%)": round(roi_std_bl, 2),
+        "Mise Std": mise_std_bl,
+        "Profit Std": round(profit_std_bl, 2),
+        "ROI Sécu (%)": round(roi_sec_bl, 2),
+        "Mise Sécu": mise_sec_bl,
+        "Profit Sécu": round(profit_sec_bl, 2),
+        "F1-Score (Seuil)": round(f1_baseline, 3)
+    })
 
 for name, (model, X_te) in trained_models.items():
     probas = model.predict_proba(X_te)[:, 1]
@@ -378,11 +405,27 @@ for name, (model, X_te) in trained_models.items():
 
     preds_sec = (probas >= SEUIL_SECURISE).astype(int)
     roi_sec, mise_sec, profit_sec = compute_roi(y_test, preds_sec, cotes_test_bilan)
-    preds_std = (probas >= 0.50).astype(int)
-    f1 = compute_f1(y_test, preds_std, TARGET_BIN)
 
+    # recherche du Seuil Optimal
+    meilleur_profit = -float('inf')
+    meilleur_roi = -999
+    meilleur_seuil = 0.50
+    meilleure_mise = 0
+
+    for seuil in seuils_a_tester:
+        preds_temp = (probas >= seuil).astype(int)
+        roi_temp, mise_temp, profit_temp = compute_roi(y_test, preds_temp, cotes_test_bilan)
+
+        if profit_temp > meilleur_profit:
+            meilleur_profit = profit_temp
+            meilleur_roi = roi_temp
+            meilleur_seuil = seuil
+            meilleure_mise = mise_temp
+
+    # Calcul du F1-Score associé à ce seuil dynamique optimal
     predictions_seuil_opti = (probas >= meilleur_seuil).astype(int)
-    f1_opti = f1_score(y_test, predictions_seuil_opti)
+    f1_opti = compute_f1(y_test, predictions_seuil_opti, TARGET_BIN)
+
     bilan_data.append({
         "Modèle": name,
         "ROI Std (%)": round(roi_std, 2),
@@ -391,35 +434,52 @@ for name, (model, X_te) in trained_models.items():
         "ROI Sécu (%)": round(roi_sec, 2),
         "Mise Sécu": mise_sec,
         "Profit Sécu": round(profit_sec, 2),
-        "F1-Score (Seuil)": round(f1_opti, 3)
+        "F1-Score (Seuil)": round(f1_opti, 3)  # F1 correspondant au seuil optimal trouvé
     })
 
-    meilleur_profit = -float('inf')
-    meilleur_roi, meilleur_seuil, meilleure_mise = -999, 0.50, 0
-
-    for seuil in seuils_a_tester:
-        preds_temp = (probas >= seuil).astype(int)
-        roi, mise, profit = compute_roi(y_test, preds_temp, cotes_test_bilan)
-
-        if profit > meilleur_profit:
-            meilleur_profit = profit
-            meilleur_roi = roi
-            meilleur_seuil = seuil
-            meilleure_mise = mise
+    # Pour le dictionnaire de tuning dynamique
+    tuning_resultats[name] = {
+        "Profit Max": round(meilleur_profit, 1),
+        "Seuil Optimal": round(meilleur_seuil, 2),
+        "ROI (%)": round(meilleur_roi, 2),
+        "Mise Totale": meilleure_mise,
+        "F1 (Seuil)": round(f1_opti, 3)
+    }
 
 print("\n" + "=" * 95)
 print(f" TABLEAU DE BORD FINANCIER STATIQUE (Seuil Fixe = {SEUIL_SECURISE})")
 print("=" * 95)
-print(pd.DataFrame(bilan_data).sort_values("F1", ascending=False).to_string(index=False))
-# %%
+df_bilan = pd.DataFrame(bilan_data)
+if not df_bilan.empty:
+    print(df_bilan.sort_values("F1-Score (Seuil)", ascending=False).to_string(index=False))
+else:
+    print("Aucune donnée disponible.")
+
 print("\n" + "=" * 75)
-print(f" TUNING DES SEUILS (Dynamique)")
+print(" TUNING DES SEUILS (Dynamique)")
 print("=" * 75)
 print(pd.DataFrame.from_dict(tuning_resultats, orient='index').sort_values("ROI (%)", ascending=False).to_string())
 print("=" * 75)
 
-# list des seuils opti trouvé :
-res_seuil_opti = {"LRbase": 0.68, "LRopt": 0.68, "RF": 0.81, "XGBbase": 0.75, "XGBopt": 0.66, "SVM": 0.68, "Lgbm": 0.73}
+# %%list des seuils opti trouvé :
+res_seuil_opti = {}
+for nom, info in tuning_resultats.items() :
+    seuil = info['Seuil Optimal']
+    res_seuil_opti[nom] = seuil
+print("\n Seuils optimaux identifiés :")
+for nom, seuil in res_seuil_opti.items():
+    print(f" - {nom} :{seuil}")
+
+#  Seuils optimaux identifiés :
+#  - LogisticRegression (Base) :0.68
+#  - LogisticRegression (Optimisé) :0.68
+#  - RandomForest :0.81
+#  - RandomForest (optimisé) :0.67
+#  - XGBoost (Base) :0.75
+#  - XGBoost (Optimisé) :0.66
+#  - SVM RBF :0.68
+#  - LightGBM :0.73
+#  - LightGBM (Optimisé) :0.68
 
 # %%=============================================================================
 # VISUALISATION DES MÉTRIQUES DE PERFORMANCE
@@ -474,9 +534,8 @@ axs[2].legend(loc="upper left")
 plt.tight_layout()
 plt.show()
 
-# %%
-# sauvegarde des modèles
-#
+# %% sauvegarde des modèles
+
 # import joblib
 # import os
 #
