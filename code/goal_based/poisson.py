@@ -69,6 +69,7 @@ for idx in tqdm(range(len(df)), desc="Calcul des Lambdas"):
 df["mu_dom"] = lambda_dom_list
 df["nu_ext"] = lambda_ext_list
 
+
 # %% =========================================================================
 #  CONSTRUCTION DU MODÈLE EXTENSION : DIXON-COLES (CORRECTION DE DÉPENDANCE)
 # =========================================================================
@@ -125,10 +126,14 @@ p1_dc, pX_dc, p2_dc = [], [], []
 
 
 def tau_correction(x, y, mu, nu, rho):
-    if x == 0 and y == 0: return 1 - mu * nu * rho
-    if x == 0 and y == 1: return 1 + mu * rho
-    if x == 1 and y == 0: return 1 + nu * rho
-    if x == 1 and y == 1: return 1 - rho
+    if x == 0 and y == 0:
+        return 1 - mu * nu * rho
+    if x == 0 and y == 1:
+        return 1 + mu * rho
+    if x == 1 and y == 0:
+        return 1 + nu * rho
+    if x == 1 and y == 1:
+        return 1 - rho
     return 1.0
 
 
@@ -201,6 +206,37 @@ print(f"Brier Score Home (Maher)    : {metrics_summary['Maher']['Brier Score (H)
 print(f"Brier Score Home (Dixon)    : {metrics_summary['Dixon-Coles']['Brier Score (H)']:.4f}")
 print("=" * 65)
 
+# %% =========================================================================
+# ÉVALUATION DES PRÉDICTIONS DE BUTS
+# =========================================================================
+from sklearn.metrics import mean_squared_error, mean_absolute_error, mean_poisson_deviance
+
+buts_réels_dom = df_fiable["FTHG"].values
+buts_réels_ext = df_fiable["FTAG"].values
+mu_attendus = df_fiable["mu_dom"].values
+nu_attendus = df_fiable["nu_ext"].values
+
+# 1. Calcul des trois métriques pour l'équipe à Domicile
+mae_dom = mean_absolute_error(buts_réels_dom, mu_attendus)
+mse_dom = mean_squared_error(buts_réels_dom, mu_attendus)
+dev_dom = mean_poisson_deviance(buts_réels_dom, mu_attendus)
+
+# 2. Calcul des trois métriques pour l'équipe à l'Extérieur
+mae_ext = mean_absolute_error(buts_réels_ext, nu_attendus)
+mse_ext = mean_squared_error(buts_réels_ext, nu_attendus)
+dev_ext = mean_poisson_deviance(buts_réels_ext, nu_attendus)
+
+print("--- EQUIPE A DOMICILE (Paramètre Mu) ---")
+print(f"Déviance de Poisson : {dev_dom:.4f}  (Qualité de la loi de distribution)")
+print(f"MSE (Erreur carrée) : {mse_dom:.4f}  (Pénalise fortement les gros écarts)")
+print(f"MAE (Erreur absolue): {mae_dom:.4f} buts d'écart moyen")
+print("-" * 65)
+print("--- EQUIPE A L'EXTÉRIEUR (Paramètre Nu) ---")
+print(f"Déviance de Poisson : {dev_ext:.4f}")
+print(f"MSE (Erreur carrée) : {mse_ext:.4f}")
+print(f"MAE (Erreur absolue): {mae_ext:.4f} buts d'écart moyen")
+print("=" * 65)
+
 
 # %% =========================================================================
 # BACKTEST ET PERFORMANCE FINANCIÈRE (VALUE BETS)
@@ -235,3 +271,9 @@ print("=" * 65)
 print(f"[{res_M[0]}] Pari(s): {res_M[1]} | Investi: {res_M[2]}€ | Profit: {res_M[3]:.2f}€ | ROI: {res_M[4]:.2f}%")
 print(f"[{res_D[0]}] Pari(s): {res_D[1]} | Investi: {res_D[2]}€ | Profit: {res_D[3]:.2f}€ | ROI: {res_D[4]:.2f}%")
 print("=" * 65)
+
+
+
+
+# %%
+print("Dixon ajouter fonction pondération temporelle")
