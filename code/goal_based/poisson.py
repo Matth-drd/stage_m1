@@ -1,270 +1,237 @@
-# %%
-import pandas as pd
-import sys
 import os
+import sys
+import numpy as np
+import pandas as pd
+from scipy.optimize import minimize
+from scipy.stats import poisson
+from sklearn.metrics import brier_score_loss, log_loss
+from tqdm import tqdm
 
 sys.path.append(os.path.abspath('code'))
 import config as conf
-import numpy as np
-from scipy.stats import poisson
-from tqdm import tqdm
 
-# %%
 df = pd.read_csv(conf.path_clean_cell)
+df['Date'] = pd.to_datetime(df['Date'])
+df = df.sort_values(by="Date").reset_index(drop=True)
 print(f"Nombre de matchs chargés : {len(df)}")
 
 # %% =========================================================================
-# CALCUL DES LAMBDAS (MU_DOM, NU_EXT) — MODÈLE DE MAHER ADAPTÉ (ROLLING + SMOOTHING)
+#  ENTRAÎNEMENT DU MODÈLE DE BASE : ROLLING MAHER (POISSON INDÉPENDANT)
 # =========================================================================
-
-# Initialisation des structures
 toutes_equipes = set(df["HomeTeam"].unique()) | set(df["AwayTeam"].unique())
 
+# Initialisation des compteurs historiques
 goals_marques_dom = {team: 0 for team in toutes_equipes}
 goals_encaisses_dom = {team: 0 for team in toutes_equipes}
 goals_marques_ext = {team: 0 for team in toutes_equipes}
 goals_encaisses_ext = {team: 0 for team in toutes_equipes}
-
 matches_joues_dom = {team: 0 for team in toutes_equipes}
 matches_joues_ext = {team: 0 for team in toutes_equipes}
 
-# Compteurs glissants de la ligue pour éviter tout data leakage
-total_buts_dom = 0
-total_buts_ext = 0
-total_matchs_ligue = 0
+total_buts_dom, total_buts_ext, total_matchs_ligue = 0, 0, 0
 
-# Vectorisation pour optimiser la vitesse d'exécution
-home_teams = df["HomeTeam"].values
-away_teams = df["AwayTeam"].values
-fthg_goals = df["FTHG"].values
-ftag_goals = df["FTAG"].values
+home_teams, away_teams = df["HomeTeam"].values, df["AwayTeam"].values
+fthg_goals, ftag_goals = df["FTHG"].values, df["FTAG"].values
 
-# Listes pour stocker les lambdas et l'historique temporel des coefficients
-lambda_dom_list = []
-lambda_ext_list = []
-alpha_instant_list = []
-delta_instant_list = []
-beta_instant_list = []
-gamma_instant_list = []
+lambda_dom_list, lambda_ext_list = [], []
+K = 5  # Lissage bayésien
 
-K = 5  # Paramètre de lissage bayésien
+for idx in tqdm(range(len(df)), desc="Calcul des Lambdas"):
+    h, a = home_teams[idx], away_teams[idx]
 
-for idx in tqdm(range(len(df))):
-    h = home_teams[idx]
-    a = away_teams[idx]
-
-    # Calcul dynamique des moyennes de la ligue à cet instant t
     if total_matchs_ligue == 0:
-        moy_ligue_dom = 1.5  # moyenne sur le dataset de but domicile
-        moy_ligue_ext = 1.0  # moyenne sur le dataset des buts ext
+        moy_ligue_dom, moy_ligue_ext = 1.5, 1.0
     else:
         moy_ligue_dom = total_buts_dom / total_matchs_ligue
         moy_ligue_ext = total_buts_ext / total_matchs_ligue
 
-    # Lissage Bayésien + Normalisation par la moyenne de la ligue 
+    # Facteurs d'attaque et de défense
     alpha_h = ((goals_marques_dom[h] + K * moy_ligue_dom) / (matches_joues_dom[h] + K)) / moy_ligue_dom
     delta_h = ((goals_encaisses_dom[h] + K * moy_ligue_ext) / (matches_joues_dom[h] + K)) / moy_ligue_ext
-
     beta_a = ((goals_encaisses_ext[a] + K * moy_ligue_dom) / (matches_joues_ext[a] + K)) / moy_ligue_dom
     gamma_a = ((goals_marques_ext[a] + K * moy_ligue_ext) / (matches_joues_ext[a] + K)) / moy_ligue_ext
 
-    # Calcul des espérances de Poisson (Lambdas) selon Maher
-    mu = alpha_h * beta_a * moy_ligue_dom
-    nu = gamma_a * delta_h * moy_ligue_ext
+    # Génération des paramètres mu et nu attendus
+    lambda_dom_list.append(alpha_h * beta_a * moy_ligue_dom)
+    lambda_ext_list.append(gamma_a * delta_h * moy_ligue_ext)
 
-    # Stockage des valeurs calculées
-    lambda_dom_list.append(mu)
-    lambda_ext_list.append(nu)
-    alpha_instant_list.append(alpha_h)
-    delta_instant_list.append(delta_h)
-    beta_instant_list.append(beta_a)
-    gamma_instant_list.append(gamma_a)
-
-    # 4. Mise à jour des compteurs individuels et globaux (Strict Rolling après calcul)
+    # Mise à jour des structures de données
     goals_marques_dom[h] += fthg_goals[idx]
     goals_encaisses_dom[h] += ftag_goals[idx]
     goals_marques_ext[a] += ftag_goals[idx]
     goals_encaisses_ext[a] += fthg_goals[idx]
-
     matches_joues_dom[h] += 1
     matches_joues_ext[a] += 1
-
     total_buts_dom += fthg_goals[idx]
     total_buts_ext += ftag_goals[idx]
     total_matchs_ligue += 1
 
-# Assignation des variables au DataFrame une seule fois en sortie de boucle
 df["mu_dom"] = lambda_dom_list
 df["nu_ext"] = lambda_ext_list
 
-# Sauvegarde des paramètres instantanés pour tes futurs graphiques (Plus de pic de zéros !)
-df["alpha_instant"] = alpha_instant_list
-df["delta_instant"] = delta_instant_list
-df["beta_instant"] = beta_instant_list
-df["gamma_instant"] = gamma_instant_list
-
 # %% =========================================================================
-# TABLEAU RÉCAPITULATIF DES PARAMÈTRES FINAUX
+#  CONSTRUCTION DU MODÈLE EXTENSION : DIXON-COLES (CORRECTION DE DÉPENDANCE)
 # =========================================================================
-# Note : Pour éviter l'effondrement des valeurs en fin de saison à cause de sqrt(Sx),
-# nous utilisons ici la moyenne globale réelle de fin de saison.
 
-final_moy_dom = df["FTHG"].mean()
-final_moy_ext = df["FTAG"].mean()
+def log_L_neg_dixon(rho_param, mu_array, nu_array, y_home, y_away):
+    rho_val = rho_param[0]
+    total_nll = 0.0
+    for k in range(len(y_home)):
+        x, y = int(y_home[k]), int(y_away[k])
+        mu, nu = mu_array[k], nu_array[k]
 
-toutes_equipes_triee = sorted(list(toutes_equipes))
+        # Fonction de correction locale tau(x, y)
+        if x == 0 and y == 0:
+            tau_val = 1 - mu * nu * rho_val
+        elif x == 0 and y == 1:
+            tau_val = 1 + mu * rho_val
+        elif x == 1 and y == 0:
+            tau_val = 1 + nu * rho_val
+        elif x == 1 and y == 1:
+            tau_val = 1 - rho_val
+        else:
+            tau_val = 1.0
 
-stats_maher = {
-    "home attack (alpha)": [],
-    "away defence (beta)": [],
-    "home defence (gamma)": [],
-    "away attack (delta)": []
-}
+        if tau_val <= 0:
+            return 1e10
+        total_nll -= np.log(tau_val)
+    return total_nll
 
-for team in toutes_equipes_triee:
-    # Calcul des forces finales normalisées par rapport à la moyenne de fin de saison
-    alpha_fin = (goals_marques_dom[team] / max(matches_joues_dom[team], 1)) / final_moy_dom
-    delta_fin = (goals_encaisses_dom[team] / max(matches_joues_dom[team], 1)) / final_moy_ext
-    beta_fin = (goals_encaisses_ext[team] / max(matches_joues_ext[team], 1)) / final_moy_dom
-    gamma_fin = (goals_marques_ext[team] / max(matches_joues_ext[team], 1)) / final_moy_ext
 
-    stats_maher["home attack (alpha)"].append(round(alpha_fin, 2))
-    stats_maher["away defence (beta)"].append(round(beta_fin, 2))
-    stats_maher["home defence (gamma)"].append(round(delta_fin, 2))  # gamma de la table = faiblesse défensive dom
-    stats_maher["away attack (delta)"].append(round(gamma_fin, 2))  # delta de la table = attaque ext
-
-df_table_maher = pd.DataFrame(stats_maher, index=toutes_equipes_triee)
-df_table_maher.index.name = "Team"
+# Recherche du rho optimal par maximum de vraisemblance
+solution = minimize(
+    fun=log_L_neg_dixon,
+    x0=[0.0],
+    args=(df["mu_dom"].values, df["nu_ext"].values, df["FTHG"].values, df["FTAG"].values),
+    method='L-BFGS-B',
+    bounds=[(-0.25, 0.10)]
+)
+rho_optimal = solution.x[0]
+print(f"    [OK] Rho optimal Dixon-Coles calculé : {rho_optimal:.4f} (Succès : {solution.success})")
 
 # %% =========================================================================
-# CALCUL DES PROBABILITÉS DE BUTS PAR MATCH — LOI DE POISSON
+# INFÉRENCE ET CALCUL DES PROBABILITÉS 1X2 (SÉPARÉES)
 # =========================================================================
 max_g = 11
+buts_possibles = np.arange(max_g)
+
 mu_arr = df["mu_dom"].values
 nu_arr = df["nu_ext"].values
 
-res = {
-    "HomeTeam": df["HomeTeam"].values,
-    "AwayTeam": df["AwayTeam"].values,
+# Listes réceptrices pour Maher
+p1_m, pX_m, p2_m = [], [], []
+# Listes réceptrices pour Dixon-Coles
+p1_dc, pX_dc, p2_dc = [], [], []
+
+
+def tau_correction(x, y, mu, nu, rho):
+    if x == 0 and y == 0: return 1 - mu * nu * rho
+    if x == 0 and y == 1: return 1 + mu * rho
+    if x == 1 and y == 0: return 1 + nu * rho
+    if x == 1 and y == 1: return 1 - rho
+    return 1.0
+
+
+for idx in range(len(df)):
+    mu_val, nu_val = mu_arr[idx], nu_arr[idx]
+    p_dom = poisson.pmf(buts_possibles, mu_val)
+    p_ext = poisson.pmf(buts_possibles, nu_val)
+
+    # --- CALCULS PROPRES À MAHER ---
+    matrix_maher = np.outer(p_dom, p_ext)
+    p1_m.append(np.sum(np.tril(matrix_maher, -1)))
+    pX_m.append(np.sum(np.diag(matrix_maher)))
+    p2_m.append(np.sum(np.triu(matrix_maher, 1)))
+
+    # --- CALCULS PROPRES À DIXON-COLES ---
+    matrix_dixon = np.copy(matrix_maher)
+    for x in [0, 1]:
+        for y in [0, 1]:
+            matrix_dixon[x, y] *= tau_correction(x, y, mu_val, nu_val, rho_optimal)
+
+    p1_dc.append(np.sum(np.tril(matrix_dixon, -1)))
+    pX_dc.append(np.sum(np.diag(matrix_dixon)))
+    p2_dc.append(np.sum(np.triu(matrix_dixon, 1)))
+
+# Injection des résultats dans le DataFrame global
+df["p_1_Maher"], df["p_X_Maher"], df["p_2_Maher"] = p1_m, pX_m, p2_m
+df["p_1_DC"], df["p_X_DC"], df["p_2_DC"] = p1_dc, pX_dc, p2_dc
+
+# %% =========================================================================
+# FILTRAGE ET VALIDATION CHRONOLOGIQUE (WARM-UP)
+# =========================================================================
+match_nb_home = df.groupby("HomeTeam").cumcount()
+match_nb_away = df.groupby("AwayTeam").cumcount()
+
+# Conservation des données lorsque les équipes ont au moins 4 matchs d'historique
+df_fiable = df[(match_nb_home >= 4) & (match_nb_away >= 4)].reset_index(drop=True)
+print(f"\nMatchs conservés après phase de warm-up : {len(df_fiable)} / {len(df)}")
+
+# %% =========================================================================
+# ÉVALUATION ET COMPARAISON DES DEUX MODÈLES
+# =========================================================================
+# Encodage cibles réelles (0=Victoire Dom, 1=Nul, 2=Victoire Ext)
+y_true_1X2 = np.where(df_fiable["FTHG"] > df_fiable["FTAG"], 0,
+                      np.where(df_fiable["FTHG"] == df_fiable["FTAG"], 1, 2))
+y_true_dom = (y_true_1X2 == 0).astype(int)
+
+# Récupération des blocs de probabilités
+probs_maher = df_fiable[["p_1_Maher", "p_X_Maher", "p_2_Maher"]].values
+probs_dixon = df_fiable[["p_1_DC", "p_X_DC", "p_2_DC"]].values
+
+# --- CALCUL DES MÉTRIQUES ---
+metrics_summary = {
+    "Maher": {
+        "Log-Loss 1X2": log_loss(y_true_1X2, probs_maher),
+        "Brier Score (H)": brier_score_loss(y_true_dom, probs_maher[:, 0])
+    },
+    "Dixon-Coles": {
+        "Log-Loss 1X2": log_loss(y_true_1X2, probs_dixon),
+        "Brier Score (H)": brier_score_loss(y_true_dom, probs_dixon[:, 0])
+    }
 }
 
-for buts in range(max_g + 1):
-    res[f"dom_{buts}_but"] = poisson.pmf(buts, mu_arr)
-    res[f"ext_{buts}_but"] = poisson.pmf(buts, nu_arr)
+print("\n" + "=" * 65)
+print("       COMPARAISON STATISTIQUE : MAHER vs DIXON & COLES")
+print("=" * 65)
+print(f"Log-Loss 1X2 (Maher)        : {metrics_summary['Maher']['Log-Loss 1X2']:.4f}")
+print(f"Log-Loss 1X2 (Dixon-Coles)  : {metrics_summary['Dixon-Coles']['Log-Loss 1X2']:.4f}")
+print("-" * 65)
+print(f"Brier Score Home (Maher)    : {metrics_summary['Maher']['Brier Score (H)']:.4f}")
+print(f"Brier Score Home (Dixon)    : {metrics_summary['Dixon-Coles']['Brier Score (H)']:.4f}")
+print("=" * 65)
 
-df_recap_global = pd.DataFrame(res)
-
-# %% =========================================================================
-# PRÉDICTION DU SCORE FINAL — MATRICE JOINTE P(X,Y) = P(X) × P(Y)
-# =========================================================================
-results = []
-
-for idx, row in df_recap_global.iterrows():
-    p_dom = np.array([row[f"dom_{i}_but"] for i in range(max_g)])
-    p_ext = np.array([row[f"ext_{i}_but"] for i in range(max_g)])
-
-    score_matrix = np.outer(p_dom, p_ext)
-
-    proba_score_max = np.max(score_matrix)
-    best_idx = np.unravel_index(np.argmax(score_matrix), score_matrix.shape)
-
-    pred_dom = best_idx[0]
-    pred_ext = best_idx[1]
-
-    p_home_win = np.sum(np.tril(score_matrix, -1))
-    p_draw = np.sum(np.diag(score_matrix))
-    p_away_win = np.sum(np.triu(score_matrix, 1))
-
-    results.append({
-        "HomeTeam": row["HomeTeam"],
-        "AwayTeam": row["AwayTeam"],
-        "Score_Predit": f"{pred_dom} - {pred_ext}",
-        "Proba_Score": round(proba_score_max, 4),
-        "p_home_win": round(p_home_win, 4),
-        "p_draw": round(p_draw, 4),
-        "p_away_win": round(p_away_win, 4),
-    })
-
-df_predictions = pd.DataFrame(results)
-df_predictions.dropna(inplace=True)
-print("\n--- TABLEAU FINAL DES PRÉDICTIONS ---")
-print(df_predictions.head(200))
 
 # %% =========================================================================
-# ÉVALUATION DU MODÈLE
+# BACKTEST ET PERFORMANCE FINANCIÈRE (VALUE BETS)
 # =========================================================================
-from sklearn.metrics import (
-    mean_absolute_error,
-    mean_squared_error,
-    mean_poisson_deviance
-)
+def simuler_performance_financiere(y_true, probs_modele, cotes, nom_modele, mise=10.0):
+    implied_prob = 1 / cotes
+    preds_decision = (probs_modele > implied_prob).astype(int)
 
-y_home = df["FTHG"].values
-y_away = df["FTAG"].values
-y_home_pred = df["mu_dom"].values
-y_away_pred = df["nu_ext"].values
+    mask = (preds_decision == 1)
+    total_investi = mask.sum() * mise
 
-y_home_pred = np.nan_to_num(y_home_pred, nan=df["FTHG"].mean())
-y_away_pred = np.nan_to_num(y_away_pred, nan=df["FTAG"].mean())
+    if total_investi == 0:
+        return nom_modele, 0, 0.0, 0.0
 
-y_home_pred = np.clip(y_home_pred, 1e-5, None)
-y_away_pred = np.clip(y_away_pred, 1e-5, None)
+    gains = np.where(y_true[mask] == 1, mise * cotes[mask], 0.0)
+    profit_net = gains.sum() - total_investi
+    roi = (profit_net / total_investi) * 100
 
-home_mean = np.nanmean(y_home)
-away_mean = np.nanmean(y_away)
+    return nom_modele, mask.sum(), total_investi, profit_net, roi
 
-y_home_baseline = np.full(len(df), home_mean)
-y_away_baseline = np.full(len(df), away_mean)
 
-y_true_global = np.concatenate([y_home, y_away])
-y_pred_global = np.concatenate([y_home_pred, y_away_pred])
-y_base_global = np.concatenate([y_home_baseline, y_away_baseline])
+# Extraction des cotes du bookmaker
+cotes_home = df_fiable.get("B365H", df_fiable.get("AvgH", 2.0)).values
 
-mask_valid = ~np.isnan(y_true_global)
-y_true_global = y_true_global[mask_valid]
-y_pred_global = y_pred_global[mask_valid]
-y_base_global = y_base_global[mask_valid]
+# Exécution des simulations indépendantes
+res_M = simuler_performance_financiere(y_true_dom, df_fiable["p_1_Maher"].values, cotes_home, "MAHER")
+res_D = simuler_performance_financiere(y_true_dom, df_fiable["p_1_DC"].values, cotes_home, "DIXON-COLES")
 
-mae_home = mean_absolute_error(y_home, y_home_pred)
-mse_home = (mean_squared_error(y_home, y_home_pred))
-poisson_home = mean_poisson_deviance(y_home, y_home_pred)
-
-mae_away = mean_absolute_error(y_away, y_away_pred)
-mse_away = (mean_squared_error(y_away, y_away_pred))
-poisson_away = mean_poisson_deviance(y_away, y_away_pred)
-
-mae_global = mean_absolute_error(y_true_global, y_pred_global)
-mse_global = (mean_squared_error(y_true_global, y_pred_global))
-poisson_global = mean_poisson_deviance(y_true_global, y_pred_global)
-
-mae_global_base = mean_absolute_error(y_true_global, y_base_global)
-mse_global_base = (mean_squared_error(y_true_global, y_base_global))
-poisson_global_base = mean_poisson_deviance(y_true_global, y_base_global)
-
-gain_mae = 100 * (mae_global_base - mae_global) / mae_global_base
-gain_mse = 100 * (mse_global_base - mse_global) / mse_global_base
-gain_poisson = 100 * (poisson_global_base - poisson_global) / poisson_global_base
-
-print("\n" + "=" * 70)
-print("MÉTRIQUES DE PERFORMANCE DU MODÈLE DE POISSON")
-print("=" * 70)
-print(f"MAE domicile           : {mae_home:.4f}")
-print(f"mse domicile          : {mse_home:.4f}")
-print(f"Poisson Deviance dom.  : {poisson_home:.4f}")
-print("-" * 70)
-print(f"MAE extérieur          : {mae_away:.4f}")
-print(f"mse extérieur         : {mse_away:.4f}")
-print(f"Poisson Deviance ext.  : {poisson_away:.4f}")
-print("-" * 70)
-print(f"MAE global             : {mae_global:.4f}")
-print(f"mse global            : {mse_global:.4f}")
-print(f"Poisson Deviance glob. : {poisson_global:.4f}")
-
-print("\n" + "=" * 70)
-print("AMÉLIORATION DU MODÈLE VS BASELINE")
-print("=" * 70)
-print(f"Gain MAE               : {gain_mae:.2f}%")
-print(f"Gain mse              : {gain_mse:.2f}%")
-print(f"Gain Poisson Deviance  : {gain_poisson:.2f}%")
-print("=" * 70)
-# %%
+print("\n" + "=" * 65)
+print(f"       SIMULATION FINANCIÈRE : STRATÉGIE VALUE BET (HOME)")
+print("=" * 65)
+print(f"[{res_M[0]}] Pari(s): {res_M[1]} | Investi: {res_M[2]}€ | Profit: {res_M[3]:.2f}€ | ROI: {res_M[4]:.2f}%")
+print(f"[{res_D[0]}] Pari(s): {res_D[1]} | Investi: {res_D[2]}€ | Profit: {res_D[3]:.2f}€ | ROI: {res_D[4]:.2f}%")
+print("=" * 65)
