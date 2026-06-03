@@ -268,12 +268,167 @@ res_D = simuler_performance_financiere(y_true_dom, df_fiable["p_1_DC"].values, c
 print("\n" + "=" * 65)
 print(f"       SIMULATION FINANCIÈRE : STRATÉGIE VALUE BET (HOME)")
 print("=" * 65)
-print(f"[{res_M[0]}] Pari(s): {res_M[1]} | Investi: {res_M[2]}€ | Profit: {res_M[3]:.2f}€ | ROI: {res_M[4]:.2f}%")
-print(f"[{res_D[0]}] Pari(s): {res_D[1]} | Investi: {res_D[2]}€ | Profit: {res_D[3]:.2f}€ | ROI: {res_D[4]:.2f}%")
+print(f"[{res_M[0]}] nb paris: {res_M[1]} | Investi: {res_M[2]}€ | Profit: {res_M[3]:.2f}€ | ROI: {res_M[4]:.2f}%")
+print(f"[{res_D[0]}] nb paris: {res_D[1]} | Investi: {res_D[2]}€ | Profit: {res_D[3]:.2f}€ | ROI: {res_D[4]:.2f}%")
 print("=" * 65)
 
+# %% =========================================================================
+#  CONSTRUCTION DU MODÈLE EXTENSION : DIXON-COLES (TEMPOREL ET OPTIMISÉ)
+# =========================================================================
 
+# 1. Préparation des variables temporelles (en demi-semaines)
+# t = 0 pour les matchs les plus récents, t augmente à mesure qu'on remonte le passé
+date_max_fiable = df_fiable["Date"].max()
+df_fiable["t_semi_weeks"] = (date_max_fiable - df_fiable["Date"]).dt.days / 3.5
+
+
+def log_L_neg_dixon_global_vectorized_fixed(params, mu_array, nu_array, y_home, y_away, t_array):
+    """
+    Version vectorisée corrigée intégrant la pondération temporelle exponentielle.
+    """
+    rho_val = params[0]
+    xi_val = params[1]
+
+    # Pénalité progressive si l'optimiseur (sans bornes) tente un Xi négatif
+    penalite = 0.0
+    if xi_val < 0:
+        penalite += 1e7 * abs(xi_val)
+        xi_val = 0.0
+
+    # Initialisation du vecteur de correction tau
+    tau_val = np.ones_like(y_home, dtype=float)
+
+    # Masques binaires pour l'application de tau(x, y)
+    m_0_0 = (y_home == 0) & (y_away == 0)
+    m_0_1 = (y_home == 0) & (y_away == 1)
+    m_1_0 = (y_home == 1) & (y_away == 0)
+    m_1_1 = (y_home == 1) & (y_away == 1)
+
+    tau_val[m_0_0] = 1 - mu_array[m_0_0] * nu_array[m_0_0] * rho_val
+    tau_val[m_0_1] = 1 + mu_array[m_0_1] * rho_val
+    tau_val[m_1_0] = 1 + nu_array[m_1_0] * rho_val
+    tau_val[m_1_1] = 1 - rho_val
+
+    # Barrière de sécurité pour éviter le log(<= 0)
+    if np.any(tau_val <= 0):
+        return 1e8 + np.sum(np.abs(tau_val[tau_val <= 0])) + penalite
+
+    # Calcul de la log-vraisemblance exacte (Poisson univarié avec logpmf direct)
+    log_poisson_home = poisson.logpmf(y_home, mu_array)
+    log_poisson_away = poisson.logpmf(y_away, nu_array)
+
+    log_match = np.log(tau_val) + log_poisson_home + log_poisson_away
+
+    if not np.all(np.isfinite(log_match)):
+        return 1e8 + penalite
+
+    # --- INTÉGRATION DE LA PONDÉRATION TEMPORELLE ---
+    # Calcul du poids phi(t) = exp(-t * xi)
+    poids = np.exp(-t_array * xi_val)
+
+    # La NLL renvoyée est la somme des log-vraisemblances pondérées par le temps
+    return -np.sum(poids * log_match) + penalite
+
+
+# 2. Lancement de l'optimisation conjointe sur les données fiables (Warm-up appliqué)
+print("Optimisation de Rho et Xi en cours...")
+
+X_mu_fiable = df_fiable["mu_dom"].values
+X_nu_fiable = df_fiable["nu_ext"].values
+y_h_fiable = df_fiable["FTHG"].values
+y_a_fiable = df_fiable["FTAG"].values
+t_fiable = df_fiable["t_semi_weeks"].values
+
+x0_params = [0.0, 0.0065]  # [Rho initial, Xi initial de Dixon-Coles 1997]
+bornes = [(-0.25, 0.10), (0.0, 0.05)]  # Contraintes sur l'espace de recherche
+
+solution_globale = minimize(
+    fun=log_L_neg_dixon_global_vectorized_fixed,
+    x0=x0_params,
+    args=(X_mu_fiable, X_nu_fiable, y_h_fiable, y_a_fiable, t_fiable),
+    method='L-BFGS-B',
+    bounds=bornes
+)
+
+# Extraction des hyperparamètres optimaux
+rho_optimal, xi_optimal = solution_globale.x
+
+print("\n" + "=" * 65)
+print("       RÉSULTATS DE L'OPTIMISATION DU MODÈLE DIXON-COLES")
+print("=" * 65)
+print(f"Succès de l'optimisation : {solution_globale.success}")
+print(f"Message de fin           : {solution_globale.message}")
+print(f"Rho optimal (Dépendance) : {rho_optimal:.4f}")
+print(f"Xi optimal (Temps)       : {xi_optimal:.6f}")
+print("=" * 65)
+
+#
+# %% =========================================================================
+#  INFÉRENCE, INFRASTRUCTURE FINANCIÈRE ET EVALUATION DU MODÈLE DIXON-COLES TEMPOREL
+# =========================================================================
+
+max_g = 11
+buts_possibles = np.arange(max_g)
+
+# Listes réceptrices pour Dixon-Coles Temporel
+p1_dct, pX_dct, p2_dct = [], [], []
+
+# La fonction de correction tau utilise maintenant le rho_optimal global calculé précédemment
+for idx in range(len(df_fiable)):
+    mu_val = X_mu_fiable[idx]
+    nu_val = X_nu_fiable[idx]
+
+    # Probabilités marginales de Poisson
+    p_dom = poisson.pmf(buts_possibles, mu_val)
+    p_ext = poisson.pmf(buts_possibles, nu_val)
+
+    # Matrice de base (Maher)
+    matrix_dixon_temp = np.outer(p_dom, p_ext)
+
+    # Application de la correction de dépendance Dixon-Coles avec le rho optimal
+    for x in [0, 1]:
+        for y in [0, 1]:
+            matrix_dixon_temp[x, y] *= tau_correction(x, y, mu_val, nu_val, rho_optimal)
+
+    # CRITIQUE : Renormalisation pour s'assurer que la somme de la matrice est strictement égale à 1.0
+    matrix_dixon_temp /= np.sum(matrix_dixon_temp)
+
+    # Calcul des probabilités 1X2 cumulées
+    p1_dct.append(np.sum(np.tril(matrix_dixon_temp, -1)))
+    pX_dct.append(np.sum(np.diag(matrix_dixon_temp)))
+    p2_dct.append(np.sum(np.triu(matrix_dixon_temp, 1)))
+
+# Injection des probabilités temporelles ajustées dans le DataFrame fiable
+df_fiable["p_1_DC_Temp"] = p1_dct
+df_fiable["p_X_DC_Temp"] = pX_dct
+df_fiable["p_2_DC_Temp"] = p2_dct
+
+# --- METRIQUES STATISTIQUES GLOBALES ---
+probs_dc_temp = df_fiable[["p_1_DC_Temp", "p_X_DC_Temp", "p_2_DC_Temp"]].values
+
+print("\n" + "=" * 75)
+print("     MISE À JOUR DU BENCHMARK STATISTIQUE (AVEC DIXON-COLES TEMPOREL)")
+print("=" * 75)
+print(f"Log-Loss 1X2 (Maher)              : {log_loss(y_true_1X2, probs_maher):.4f}")
+print(f"Log-Loss 1X2 (Dixon-Coles)        : {log_loss(y_true_1X2, probs_dixon):.4f}")
+print(f"Log-Loss 1X2 (Dixon-Coles Temp)   : {log_loss(y_true_1X2, probs_dc_temp):.4f}")
+print("-" * 75)
+print(f"Brier Score Home (Maher)          : {brier_score_loss(y_true_dom, probs_maher[:, 0]):.4f}")
+print(f"Brier Score Home (Dixon)          : {brier_score_loss(y_true_dom, probs_dixon[:, 0]):.4f}")
+print(f"Brier Score Home (Dixon Temp)     : {brier_score_loss(y_true_dom, probs_dc_temp[:, 0]):.4f}")
+print("=" * 75)
+
+# %%
+res_DCT = simuler_performance_financiere(y_true_dom, df_fiable["p_1_DC_Temp"].values, cotes_home, "DIXON-COLES TEMP")
+
+print("\n" + "=" * 75)
+print(f"       SIMULATION FINANCIÈRE GLOBALE : STRATÉGIE VALUE BET (HOME)")
+print("=" * 75)
+print(f"[{res_M[0]}]            nb paris: {res_M[1]} | Investi: {res_M[2]}€ | Profit: {res_M[3]:.2f}€ | ROI: {res_M[4]:.2f}%")
+print(f"[{res_D[0]}]      nb paris: {res_D[1]} | Investi: {res_D[2]}€ | Profit: {res_D[3]:.2f}€ | ROI: {res_D[4]:.2f}%")
+print(f"[{res_DCT[0]}] nb paris: {res_DCT[1]} | Investi: {res_DCT[2]}€ | Profit: {res_DCT[3]:.2f}€ | ROI: {res_DCT[4]:.2f}%")
+
+print("=" * 75)
 
 
 # %%
-print("Dixon ajouter fonction pondération temporelle")
