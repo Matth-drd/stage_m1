@@ -1,9 +1,13 @@
 \chapter{Approche statistique}
+La première approche abordée par la littérature est l'approche statistique. 
+Nous avons donc naturellement implémenté un modèle se basant sur la loi de 
+Poisson. Dans un premier, nous nous sommes concentré sur la version de Maher, 
+puis nous avons appliqués les modifications de Dixon et Coles. 
+
 \section{Modèle de Poisson -- Maher (1982)}
 
-La loi de Poisson repose sur l'hypothèse que la possession du ballon se transforme 
+L'utili de la loi de Poisson repose sur l'hypothèse que la possession du ballon se transforme 
 en but avec une probabilité $p$ faible, mais que le nombre d'occasions est élevé. 
-Sous ces conditions, le nombre de buts suit asymptotiquement une loi de Poisson.
 On notera que la loi binomiale négative constitue une alternative plus flexible, 
 capable de modéliser la surdispersion éventuelle des scores, mais nous retenons 
 ici la loi de Poisson conformément à Maher (1982)\cite{maher}.\\
@@ -61,7 +65,7 @@ Dans la formulation originale de Maher (1982), les paramètres sont estimés de
 manière statique sur l'ensemble de la saison. Cette approche introduit un 
 \textit{data leakage} majeur, car des informations chronologiquement futures sont 
 utilisées pour prédire des matchs passés. De plus, la normalisation historique par 
-$\sqrt{S_x}$ entraîne un effondrement mathématique des paramètres au fil du temps, ce 
+$\sqrt{S_x}$ entraîne un effondrement mathématique des paramètres au fil des saisons, ce 
 dénominateur croissant indéfiniment avec le nombre total de matchs joués dans la ligue.
 
 Pour remédier à ces limites, nous adoptons un calcul en \textit{rolling strict} : à 
@@ -73,9 +77,9 @@ Ce lissage combine les performances intrinsèques de l'équipe avec un prior
 global, modélisé par la moyenne glissante de la ligue calculée jusqu'à l'instant $t$. 
 
 De plus, pour éviter que les valeurs de $\alpha, \beta$ et $\gamma, \delta$ 
-n'explosent, chaque coefficient est divisé par la moyenne de la ligue en cours 
+n'explosent, chaque coefficient est divisé par la moyenne de la ligue en cours.
 
-Pour un match opposant l'équipe $i$ (à domicile) à l'équipe $j$ (à l'extérieur) à 
+\noindent Pour un match opposant l'équipe $i$ (à domicile) à l'équipe $j$ (à l'extérieur) à 
 l'instant $t$, les quatre coefficients de force sont définis par :
 
 \[
@@ -128,46 +132,12 @@ Cette formulation garantit que $\mu^{(t)}$ et $\nu^{(t)}$ conservent rigoureusem
 leur sens statistique d'espérances de buts par match à l'instant $t$, tout en 
 éliminant les anomalies sur les scores extrêmes.
 
-\subsection{Métriques d'évaluation des buts}
-Erreur Quadratique Moyenne : $MSE = \frac{1}{n} \sum(y - \hat{y})^2$
-
-
-L'Erreur Quadratique Moyenne (MSE) mesure la moyenne des carrés des écarts entre les 
-valeurs prédites et les valeurs réelles. 
-En élevant au carré les erreurs de prédiction, la MSE pénalise les erreurs importantes. 
-Cette propriété la rend particulièrement 
-utile dans des contextes où les grandes erreurs doivent être évitées à tout prix.\\
-
-
-Erreur Absolue Moyenne (MAE) :
-$MAE= \frac{1}{n} \sum|y - \hat{y}|$ 
-
-L'Erreur Absolue Moyenne (MAE) est une métrique qui mesure, en moyenne, la 
-magnitude des erreurs entre les valeurs prédites par le modèle et les valeurs 
-réelles observées, sans tenir compte de la direction de l'erreur. 
-La MAE est appréciée pour sa simplicité et son interprétation intuitive. Elle donne 
-une estimation directe de l'erreur moyenne sur l'ensemble des prédictions. Étant 
-donné qu'elle utilise la valeur absolue des erreurs, elle est robuste face aux 
-valeurs aberrantes, contrairement à d'autres métriques qui amplifient les erreurs.\\
-
-mean\_poisson\_deviance\\
-Pour une observation :
-\[
-D(y, \hat{y}) = 2 \left( y \log\left(\frac{y}{\hat{y}}\right) - (y - \hat{y}) \right)
-\]
-Pour $n$ observations :
-\[
-\text{mean\_poisson\_deviance} = \frac{1}{n} \sum_{i=1}^{n} 2 \left( y_i \log\left(\frac{y_i}{\hat{y}_i}\right) - (y_i - \hat{y}_i) \right)
-\]
-
-Cette formule mesure l'erreur entre les valeurs réelles $y$ et les prédictions 
-$\hat{y}$ pour des données de comptage (0,1,2,\dots). Plus la valeur est petite, 
-meilleur est le modèle.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Approche statistique de Dixon et Coles}
-Dans la continuité du modèle de Maher, Dixon et Coles ont appliqué une fonction $\tau$ pour gérer 
+Dans la continuité du modèle de Maher, Dixon et Coles ont appliqué un coefficient $\gamma$ représentant 
+l'avantage de jouer à domicile, ainsi qu'une fonction $\tau$ pour gérer 
 les petits scores $x$-$y$ avec $x,y \in \left\{ 0,1 \right\} $.
 \[
 \tau(x, y) = 
