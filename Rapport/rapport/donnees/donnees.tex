@@ -145,7 +145,7 @@ divisions par zéro.
     Elo               & \texttt{XX\_Elo\_H}        & \texttt{XX\_Elo\_A}        & Niveau de puissance avant match \\
     Rank              & \texttt{H\_Rank}         & \texttt{A\_Rank}         & Classement basé sur les points  \\
     Précision         & \texttt{FT\_Hprecision}   & \texttt{FT\_Aprecision}   & Ratio tirs cadrés / tirs totaux \\
-    Efficacité pond.  & \texttt{FT\_Hprec\_weight} & \texttt{FT\_Aprec\_weight} & Précision pondérée ($w_g = 12$) \\
+    Efficacité pond.  & \texttt{FT\_Hprec\_weight} & \texttt{FT\_Aprec\_weight} & Précision pondérée ($w_g = 2$) \\
     Fautes            & \texttt{FT\_HavgF}        & \texttt{FT\_AavgF}        & Moyenne fautes (5 matchs) \\
     Cartons J.        & \texttt{FT\_HavgY}        & \texttt{FT\_AavgY}        & Moyenne jaunes (5 matchs) \\
     Cartons R.        & \texttt{FT\_HavgR}        & \texttt{FT\_AavgR}        & Moyenne rouges (5 matchs) \\
@@ -172,7 +172,8 @@ espace probabiliste : $P(Home) + P(Reste) = 1$.
 
 
 Par la suite nous avons procédé à un classement des bookmakers 
-entre eux à l'aide d'un Critical Difference diagramme. Cette méthode se 
+entre eux à l'aide d'un Critical Difference diagramme\footnote{https://mirkobunse.github.io/CriticalDifferenceDiagrams.jl/dev/}. 
+Cette méthode se 
 base sur un test de Friedman afin de déterminer s'il éxiste ou non des différences 
 significative entre les éléments comparer. Une fois ce test réalisé, l'analyse peut 
 avoir lieu. 
@@ -183,8 +184,8 @@ avoir lieu.
     \caption{Diagram de différences critique entre les bookmaker}
     \label{fig:cdd}
 \end{figure}
-\noindent Sur la figure \ref{fig:cdd} le trait noir reliant de couleur signifi, qu'il n'y a pas de différence 
-significative entre les deux bookmakers. 
+\noindent Sur la figure \ref{fig:cdd} le trait noir reliant deux couleur indique qu'il n'y a pas 
+de différence significative entre les deux bookmakers. 
 
 
 

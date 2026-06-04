@@ -33,8 +33,12 @@ précision (\texttt{FT\_prec\_diff}, \texttt{FT\_prec\_ratio}).
 \subsection{ANOVA --- \texttt{SelectKBest} avec f\_classif}
 
 L'ANOVA (\textit{Analysis of Variance}) est une méthode qui mesure la
-dépendance linéaire entre chaque descripteur et la variable cible. Pour chaque variable
-$X_k$, la statistique $F$ est définie par :
+dépendance linéaire entre chaque descripteur et la variable cible via la 
+F-value\footnote{"The F value is calculated by dividing the variance between the group 
+means by the variance within the groups. The F value is then compared to a critical value 
+from an F-distribution to determine if the difference between group means is statistically 
+significant or not." Samuel Mores Geddam \cite{postfvalue}}. 
+Pour chaque variable $X_k$, la statistique $F$ est définie par :
 
 \begin{equation}
     F_k = \frac{\text{variance inter-classes}}{\text{variance intra-classes}}

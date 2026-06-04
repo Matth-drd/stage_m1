@@ -42,29 +42,30 @@
 \cfoot{\thepage}
 
 % --- Titre ---
-\title{
-    \vspace{2cm}
-    \Large\textbf{La Rochelle Université} \\[0.3cm]
-    \large Master (MIX) --- 1\textsuperscript{ère} année \\[1.5cm]
-    \rule{\linewidth}{0.5mm} \\[0.4cm]
-    {\LARGE \textbf{Prédiction de l'issue de matchs de football par apprentissage automatique}} \\[0.3cm]
-    \rule{\linewidth}{0.5mm} \\[1.5cm]
-    \large Rapport de Stage \\[2cm]
-}
-\author{
-    \textbf{Stagiaire :} Matthieu Durand \\[0.5cm]
-    \textbf{Tuteurs :} \\
-    M. Essoham Ali, Maître de Conférence \\
-    Institut de Mathématiques Appliquées d'Angers \\[0.3cm]
-    M. Christophe Saint-Jean, Maître de Conférence \\
-    La Rochelle Université
-}
-\date{}
+% \title{
+%     \vspace{2cm}
+%     \Large\textbf{La Rochelle Université} \\[0.3cm]
+%     \large Master (MIX) --- 1\textsuperscript{ère} année \\[1.5cm]
+%     \rule{\linewidth}{0.5mm} \\[0.4cm]
+%     {\LARGE \textbf{Prédiction de l'issue de matchs de football par apprentissage automatique}} \\[0.3cm]
+%     \rule{\linewidth}{0.5mm} \\[1.5cm]
+%     \large Rapport de Stage \\[2cm]
+% }
+% \author{
+%     \textbf{Stagiaire :} Matthieu Durand \\[0.5cm]
+%     \textbf{Tuteurs :} \\
+%     M. Essoham Ali, Maître de Conférence \\
+%     Institut de Mathématiques Appliquées d'Angers \\[0.3cm]
+%     M. Christophe Saint-Jean, Maître de Conférence \\
+%     La Rochelle Université
+% }
+% \date{}
 
 % ============================================================
 \begin{document}
 
-\maketitle
+% \maketitle
+\include{title_page.tex}
 \newpage
 
 \tableofcontents
@@ -160,8 +161,8 @@ pas respecter la chronologie des matchs.
 \input{feature/selection.tex}
 
 % ============================================================
-\input{modele/modeles.tex}
 \input{modele/stat.tex}
+\input{modele/modeles.tex}
 
 % ============================================================
 \input{metrique/metrique.tex}
