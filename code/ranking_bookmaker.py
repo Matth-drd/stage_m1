@@ -74,8 +74,20 @@ if p_value < 0.05:
 
     fig, ax = plt.subplots(figsize=(10, 4))
     sp.critical_difference_diagram(ranks, p_matrix, ax=ax)
+
+    result = sp.critical_difference_diagram(ranks, p_matrix, ax=ax)
+    crossbars = result["crossbars"]
+    for group in crossbars:
+        for line in group:
+            x = line.get_xdata()
+            y = line.get_ydata()
+            x_min, x_max = np.min(x), np.max(x)
+            y_val = y[0]
+            ax.plot([x_min, x_max], [y_val, y_val], marker='o', markersize=6,
+                    color="red", linestyle='None', zorder=10)
     plt.title(
-        f"CD Diagram — Comparaison des Bookmakers sur {len(scores_df)} Saisons\n(Métrique : Log-Loss moyenne H vs Rest)",
+        f"CD Diagram — Comparaison des Bookmakers sur {len(scores_df)} Saisons\n"
+        f"(Métrique : Log-Loss moyenne H vs Rest)",
         fontsize=12, pad=15)
     plt.tight_layout()
     plt.show()
