@@ -9,6 +9,8 @@ from scipy.stats import poisson
 from scipy.optimize import minimize
 from sklearn.metrics import log_loss, roc_auc_score, f1_score, mean_squared_error, confusion_matrix
 import seaborn as sns
+import scikit_posthocs as sp
+import scipy.stats as stats
 
 sys.path.append(os.path.abspath('code'))
 import config as conf
@@ -77,7 +79,7 @@ def _load_models(models_dir=MODELS_DIR):
 modeles_ml = _load_models(MODELS_DIR)
 
 # %% =========================================================================
-#  MODÈLE STATISTIQUE (DIXON-COLES) SUR LE TEST
+#  MODÈLES STATISTIQUES (DIXON-COLES BASE & DIXON-COLES TEMPOREL OPTIMISÉ)
 # =========================================================================
 toutes_equipes = set(df["HomeTeam"].unique()) | set(df["AwayTeam"].unique())
 
@@ -119,13 +121,19 @@ for idx in range(len(df)):
     tot_b_ext += ftag[idx]
     tot_m += 1
 
-# Extraction des lambdas pour le bloc Train afin d'optimiser rho sans Data Leakage
+# Extraction des paramètres pour le bloc Train (Respect de la chronologie sans Data Leakage)
 mu_train = np.array(mu_tous[:split_idx])
 nu_train = np.array(nu_tous[:split_idx])
 fthg_train = fthg[:split_idx]
 ftag_train = ftag[:split_idx]
 
+# Calcul des demi-semaines (Time-decay) sur le bloc Train
+df_train_time = df.iloc[:split_idx].copy()
+date_max_train = df_train_time["Date"].max()
+t_train_semi_weeks = (date_max_train - df_train_time["Date"]).dt.days / 3.5
 
+
+# --- FONCTIONS DE SÉCURITÉ ---
 def tau(x, y, mu, nu, rho):
     if x == 0 and y == 0: return 1 - mu * nu * rho
     if x == 0 and y == 1: return 1 + mu * rho
@@ -137,41 +145,82 @@ def tau(x, y, mu, nu, rho):
 def log_L_neg(params, mu, nu, x, y):
     rho = params[0]
     if abs(rho) > 1: return 1e6
-
     t_factors = np.ones_like(x, dtype=float)
     for i in range(len(x)):
         if x[i] <= 1 and y[i] <= 1:
             t_factors[i] = tau(x[i], y[i], mu[i], nu[i], rho)
-
     if np.any(t_factors <= 0): return 1e6
-
     log_lik = np.log(poisson.pmf(x, mu)) + np.log(poisson.pmf(y, nu)) + np.log(t_factors)
     return -np.sum(log_lik)
 
 
-# Optimisation de rho uniquement sur le Train pour respecter la chronologie
-print("Optimisation du paramètre de dépendance rho sur le Train")
-res = minimize(fun=log_L_neg, x0=[0.0], args=(mu_train, nu_train, fthg_train, ftag_train), method='Nelder-Mead')
-rho_optimal = res.x[0]
-print(f"    [OK] rho optimal calculé : {rho_optimal:.4f}")
+def log_L_neg_dixon_global_vectorized_fixed(params, mu_array, nu_array, y_home, y_away, t_array):
+    rho_val, xi_val = params[0], params[1]
+    penalite = 0.0
+    if xi_val < 0:
+        penalite += 1e7 * abs(xi_val)
+        xi_val = 0.0
 
-# Application sur le jeu de Test
+    tau_val = np.ones_like(y_home, dtype=float)
+    m_0_0, m_0_1, m_1_0, m_1_1 = (y_home == 0) & (y_away == 0), (y_home == 0) & (y_away == 1), (y_home == 1) & (
+            y_away == 0), (y_home == 1) & (y_away == 1)
+
+    tau_val[m_0_0] = 1 - mu_array[m_0_0] * nu_array[m_0_0] * rho_val
+    tau_val[m_0_1] = 1 + mu_array[m_0_1] * rho_val
+    tau_val[m_1_0] = 1 + nu_array[m_1_0] * rho_val
+    tau_val[m_1_1] = 1 - rho_val
+
+    if np.any(tau_val <= 0): return 1e8 + np.sum(np.abs(tau_val[tau_val <= 0])) + penalite
+
+    log_match = np.log(tau_val) + poisson.logpmf(y_home, mu_array) + poisson.logpmf(y_away, nu_array)
+    if not np.all(np.isfinite(log_match)): return 1e8 + penalite
+
+    phi = np.exp(-t_array * xi_val)
+    return -np.sum(phi * log_match) + penalite
+
+
+# --- EXÉCUTION DE L'OPTIMISATION DES DEUX MODÈLES SUR LE TRAIN ---
+print("1. Optimisation du modèle Dixon-Coles de Base (uniquement rho)...")
+res_base = minimize(fun=log_L_neg, x0=[0.0], args=(mu_train, nu_train, fthg_train, ftag_train), method='Nelder-Mead')
+rho_base_opt = res_base.x[0]
+
+print("2. Optimisation du modèle Dixon-Coles Temporel (rho + xi)...")
+bornes = [(-0.25, 0.10), (0.0, 0.05)]
+res_temp = minimize(
+    fun=log_L_neg_dixon_global_vectorized_fixed,
+    x0=[0.0, 0.0065],
+    args=(mu_train, nu_train, fthg_train, ftag_train, t_train_semi_weeks.values),
+    method='L-BFGS-B',
+    bounds=bornes
+)
+rho_temp_opt, xi_temp_opt = res_temp.x
+print(f"    [OK] Modèle Temporel -> Rho: {rho_temp_opt:.4f} | Xi: {xi_temp_opt:.6f}")
+
+# --- INFERENCE ET CALCUL DES PROBABILITÉS SUR LE TEST ---
 mu_test = mu_tous[split_idx:]
 nu_test = nu_tous[split_idx:]
-
-probs_dc_home = []
 max_g = 10
 buts = np.arange(max_g)
 
+probs_dc_base = []
+probs_dc_temp = []
+
 for i in range(len(df_test)):
     mu_val, nu_val = mu_test[i], nu_test[i]
-    matrix = np.outer(poisson.pmf(buts, mu_val), poisson.pmf(buts, nu_val))
+    matrix_base = np.outer(poisson.pmf(buts, mu_val), poisson.pmf(buts, nu_val))
+    matrix_temp = matrix_base.copy()
+
+    # Application de tau avec les deux jeux de paramètres distincts
     for x in [0, 1]:
         for y in [0, 1]:
-            matrix[x, y] *= tau(x, y, mu_val, nu_val, rho_optimal)
-    probs_dc_home.append(np.sum(np.tril(matrix, -1)))
+            matrix_base[x, y] *= tau(x, y, mu_val, nu_val, rho_base_opt)
+            matrix_temp[x, y] *= tau(x, y, mu_val, nu_val, rho_temp_opt)
 
-probs_dc_home = np.array(probs_dc_home)
+    probs_dc_base.append(np.sum(np.tril(matrix_base, -1)))
+    probs_dc_temp.append(np.sum(np.tril(matrix_temp, -1)))
+
+probs_dc_home = np.array(probs_dc_base)
+probs_dc_temp_home = np.array(probs_dc_temp)
 
 # %% =========================================================================
 # SYNTHÈSE DES COMPARAISONS
@@ -217,6 +266,7 @@ def simuler_value_bet(probs_pred, cotes, y_true, nom_modele, critere_decision, e
 
 # Simulation Dixon-Coles (Pour le F1 score, y_pred_bin utilise le critère implicite proba > bookmaker)
 y_pred_bin_dc = (probs_dc_home > (1 / cotes_test)).astype(int)
+y_pred_bin_dc_temp = (probs_dc_temp_home > (1 / cotes_test)).astype(int)
 
 bilan_ds = [{
     "Modèle": "Dixon-Coles (Stats)",
@@ -225,10 +275,19 @@ bilan_ds = [{
     "F1 Score": round(f1_score(y_test, y_pred_bin_dc, zero_division=0), 4),
     "AUC ROC": round(roc_auc_score(y_test, probs_dc_home), 4)
 }]
-
+bilan_ds.append({
+    "Modèle": "Dixon-Coles (Optimisé + Temps)",
+    "Log-Loss": round(log_loss(y_test, probs_dc_temp_home), 4),
+    "MSE": round(mean_squared_error(y_test, probs_dc_temp_home), 4),
+    "F1 Score": round(f1_score(y_test, y_pred_bin_dc_temp, zero_division=0), 4),
+    "AUC ROC": round(roc_auc_score(y_test, probs_dc_temp_home), 4)
+})
 bilan_finances = [
     simuler_value_bet(probs_dc_home, cotes_test, y_test, "Dixon-Coles (Stats)", critere_decision=None, est_ml=False)]
-
+bilan_finances.append(
+    simuler_value_bet(probs_dc_temp_home, cotes_test, y_test, "Dixon-Coles (Optimisé + Temps)", critere_decision=None,
+                      est_ml=False)
+)
 # Évaluation des modèles de Machine Learning chargés
 for nom_affiche, (model, scaler, use_scaling, seuil_opt) in modeles_ml.items():
     X_input = scaler.transform(X_test_brut) if use_scaling else X_test_brut.values
@@ -264,7 +323,6 @@ df_finances_res = pd.DataFrame(bilan_finances).sort_values('ROI (%)', ascending=
 print(df_finances_res.to_string(index=False))
 
 # %% =========================================================================
-#
 # --- GRAPHIQUE 1 : ÉVOLUTION CHRONOLOGIQUE DES PROFITS ---
 plt.figure(figsize=(14, 6))
 index_matchs = np.arange(1, len(df_test) + 1)
@@ -385,7 +443,8 @@ plt.show()
 
 # 1. Dictionnaire pour stocker les probabilités de tous les modèles sur le Test
 dict_probs_tous = {
-    "Dixon-Coles (Stats)": probs_dc_home
+    "Dixon-Coles (Stats)": probs_dc_home,
+    "Dixon-Coles (Optimisé + Temps)": probs_dc_temp_home
 }
 
 # Extraction des probabilités pour les modèles ML
@@ -418,6 +477,7 @@ for nom_modele, probs_pred in dict_probs_tous.items():
 plt.title("Stabilité et Évolution du Log-Loss Cumulé sur le Jeu de Test (Plus bas = Meilleur)",
           fontsize=13, fontweight='bold')
 plt.xlabel("Nombre de Matchs Évalués (Chronologique)", fontsize=11)
+plt.xlabel("Nombre de Matchs Évalués (Chronologique)", fontsize=11)
 plt.ylabel("Log-Loss Moyen Cumulé", fontsize=11)
 plt.grid(True, linestyle=':', alpha=0.6)
 
@@ -425,5 +485,74 @@ plt.grid(True, linestyle=':', alpha=0.6)
 plt.legend(loc="upper left", bbox_to_anchor=(1.02, 1), borderaxespad=0, fontsize=9)
 plt.tight_layout()
 plt.show()
-
+print("matrice plot")
 # %%
+# Ranking
+df_test_time = df.iloc[split_idx:].copy()
+
+# Regroupement par Saisons uniquement pour le Critical Difference Diagram
+if 'Season' in df_test_time.columns:
+    group_col = df_test_time['Season'].values
+    group_label = "Saisons"
+else:
+    # Sécurité au cas où la colonne 'Season' est absente
+    group_col = np.array(["Global"] * len(df_test_time))
+    group_label = "Global"
+
+loss_df = pd.DataFrame(index=df_test_time.index)
+loss_df['Group_Period'] = group_col
+
+#  Log-Loss modèles de Machine Learning
+for nom_modele, probs_pred in dict_probs_tous.items():
+    p_clipped = np.clip(probs_pred, 1e-15, 1 - 1e-15)
+    loss_df[nom_modele] = -(y_test * np.log(p_clipped) + (1 - y_test) * np.log(1 - p_clipped))
+
+#  Log-Loss du Bookmaker Bwin
+# Extraction et conversion numérique des cotes de Bwin
+bwh = pd.to_numeric(df_test_time['BWH'], errors='coerce').values
+bwd = pd.to_numeric(df_test_time['BWD'], errors='coerce').values
+bwa = pd.to_numeric(df_test_time['BWA'], errors='coerce').values
+
+# Calcul des probabilités brutes (inverses des cotes)
+p_h_raw = 1.0 / bwh
+p_d_raw = 1.0 / bwd
+p_a_raw = 1.0 / bwa
+margin = p_h_raw + p_d_raw + p_a_raw
+
+# Normalisation pour obtenir la vraie probabilité Home
+prob_bwin_h = p_h_raw / margin
+prob_bwin_h = np.clip(prob_bwin_h, 1e-15, 1 - 1e-15)
+
+# Calcul de la Log-Loss binaire de Bwin
+loss_df['Bwin (Bookmaker)'] = -(y_test * np.log(prob_bwin_h) + (1 - y_test) * np.log(1 - prob_bwin_h))
+
+loss_df = loss_df.dropna()
+
+#  Agrégation par période pour obtenir les moyennes par bloc
+scores_all_models = loss_df.groupby('Group_Period').mean()
+
+print(f"\n--- MATRICE DES LOG-LOSS MOYENNES PAR {group_label.upper()} ---")
+print(scores_all_models.round(4).head())
+print("-" * 90)
+
+# Calcul des rangs moyens et du test post-hoc
+ranks = scores_all_models.rank(axis=1).mean()
+p_matrix = sp.posthoc_nemenyi_friedman(scores_all_models)
+
+fig, ax = plt.subplots(figsize=(11, 5))
+
+result = sp.critical_difference_diagram(ranks, p_matrix, ax=ax)
+
+crossbars = result["crossbars"]
+for group in crossbars:
+    for line in group:
+        x = line.get_xdata()
+        y = line.get_ydata()
+        x_min, x_max = np.min(x), np.max(x)
+        y_val = y[0]
+        ax.plot([x_min, x_max], [y_val, y_val],
+                marker='o', markersize=6,
+                color="red", linestyle='None', zorder=10)
+
+plt.title(f"Diagramme de Différence Critique (CD Diagram) sur le Jeu de Test")
+plt.show()
