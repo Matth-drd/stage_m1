@@ -426,7 +426,7 @@ print(df.value_counts("FTR"))
 # =================
 # Sauvegarde du dataframe en CSV
 # =================
-df.to_csv("../data/csv/foot_v4.csv", index=False)
+df.to_csv("../data/csv/foot_process.csv", index=False)
 print("CSV sauvegardé")
 
 # 'Hvs', 'Avs', 'Dvs' permette de comparer 1 résultat spécifique par rapport au reste
