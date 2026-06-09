@@ -78,7 +78,7 @@ afin de capturer l'état de forme récent.
 Le rapport $\frac{\text{tirs cadrés}}{\text{tirs tentés}}$ mesure la qualité offensive. Une variante
 pondérée (\texttt{FT\_prec\_weight}) applique un facteur $w_g = 2$ aux tirs
 convertis en buts (nous considérons qu'un but est deux fois plus important qu'un 
-tire cadré).
+tir cadré).
 
 \paragraph{Discipline.}
 Les moyennes de fautes et de cartons (jaunes et rouges) sur les 5 derniers matchs
@@ -104,7 +104,7 @@ le dernier match (plafonné à 25 jours), capturant la fatigue potentielle ou la
 Le score Elo est mis à jour itérativement après chaque match avec un facteur de
 pondération $G$ lié à l'écart de buts, constituant la base de l'évaluation du niveau des équipes.
 
-\paragraph{Classement ('Rank')}
+\paragraph{Classement ('Rank').}
 Nous avons également calculé un classement basé sur les points au cours d'une saison.
 Une victoire rapporte 3 points, un match nul 1 point, et une défaite 0 point.
 Ce classement est mis à jour après chaque match, reflétant la performance relative des équipes au fil de la saison.
@@ -139,10 +139,10 @@ divisions par zéro.
     \textbf{Catégorie} & \textbf{Domicile} & \textbf{Extérieur} & \textbf{Description} \\
     \midrule
     \endhead
-    Forme (FT/HT)     & \texttt{XX\_Hforme}       & \texttt{XX\_Aforme}       & Moyenne buts (5 derniers matchs) \\
+    Forme (FT/HT)     & \texttt{XX\_Hforme}       & \texttt{XX\_Aforme}       & Moyenne buts (sur 5 matchs) \\
     Attaque (FT)      & \texttt{FT\_Hatt}         & \texttt{FT\_Aatt}         & Moyenne des tirs effectués \\
     Défense (FT/HT)   & \texttt{XX\_Hdef}         & \texttt{XX\_Adef}         & Moyenne des tirs concédés \\
-    Elo               & \texttt{XX\_Elo\_H}        & \texttt{XX\_Elo\_A}        & Niveau de puissance avant match \\
+    Elo               & \texttt{XX\_Elo\_H}        & \texttt{XX\_Elo\_A}        & Classement elo avant match \\
     Rank              & \texttt{H\_Rank}         & \texttt{A\_Rank}         & Classement basé sur les points  \\
     Précision         & \texttt{FT\_Hprecision}   & \texttt{FT\_Aprecision}   & Ratio tirs cadrés / tirs totaux \\
     Efficacité pond.  & \texttt{FT\_Hprec\_weight} & \texttt{FT\_Aprec\_weight} & Précision pondérée ($w_g = 2$) \\
@@ -171,10 +171,10 @@ Cette étape garantit que le modèle et les bookmakers sont évalués sur le mê
 espace probabiliste : $P(Home) + P(Reste) = 1$.
 
 
-Par la suite nous avons procédé à un classement des bookmakers 
+Par la suite, nous avons procédé à un classement des bookmakers 
 entre eux à l'aide d'un Critical Difference diagramme\footnote{https://mirkobunse.github.io/CriticalDifferenceDiagrams.jl/dev/}. 
 Cette méthode se 
-base sur un test de Friedman afin de déterminer s'il éxiste ou non des différences 
+base sur un test de Friedman afin de déterminer s'il existe ou non des différences 
 significative entre les éléments comparer. Une fois ce test réalisé, l'analyse peut 
 avoir lieu. 
 
@@ -204,7 +204,7 @@ trois colonnes cibles binaires sont créées :
 
 Cela permet de rééquilibrer les classes, nous passons d'une distribution 
 45\% - 25\% - 30\% à 45\% - 55\%.
-De plus par la suite, si nous souhaitons entrainer un modèle par cible,
+De plus, par la suite, si nous souhaitons entrainer un modèle par cible,
 cela nous permettra si nécessaire de combiner les modèles afin
 d'obtenir une prédiction plus robuste.
 

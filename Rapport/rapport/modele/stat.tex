@@ -1,140 +1,140 @@
 \chapter{Approche statistique}
 La première approche abordée par la littérature est l'approche statistique. 
 Nous avons donc naturellement implémenté un modèle se basant sur la loi de 
-Poisson. Dans un premier, nous nous sommes concentré sur la version de Maher, 
+Poisson. Dans un premier temps, nous nous sommes concentré sur la version de Maher, 
 puis nous avons appliqués les modifications de Dixon et Coles. 
 
-\section{Modèle de Poisson -- Maher (1982)}
+% \section{Modèle de Poisson -- Maher (1982)}
 
-L'utili de la loi de Poisson repose sur l'hypothèse que la possession du ballon se transforme 
-en but avec une probabilité $p$ faible, mais que le nombre d'occasions est élevé. 
-On notera que la loi binomiale négative constitue une alternative plus flexible, 
-capable de modéliser la surdispersion éventuelle des scores, mais nous retenons 
-ici la loi de Poisson conformément à Maher (1982)\cite{maher}.\\
+% L'utilisation de la loi de Poisson repose sur l'hypothèse que la possession du ballon se transforme 
+% en but avec une probabilité $p$ faible, mais que le nombre d'occasions est élevé. 
+% On notera que la loi binomiale négative constitue une alternative plus flexible, 
+% capable de modéliser la surdispersion éventuelle des scores, mais nous retenons 
+% ici la loi de Poisson conformément à Maher (1982)\cite{maher}.\\
 
-\noindent On note $i$ l'équipe à domicile et $j$ l'équipe extérieure. Le couple de 
-scores $(x_{ij}, y_{ij})$ est modélisé comme suit : $X_{ij}$ suit une loi de Poisson 
-de moyenne $\alpha_i \beta_j$, $Y_{ij}$ suit une loi de Poisson de moyenne 
-$\gamma_i \delta_j$, et $X_{ij}$ et $Y_{ij}$ sont supposés indépendants. 
-Les paramètres ont l'interprétation suivante : $\alpha_i$ représente la force 
-d'attaque de l'équipe $i$ à domicile, $\beta_j$ la faiblesse défensive de l'équipe 
-$j$ à l'extérieur, $\gamma_i$ la faiblesse défensive de $i$ à domicile, et $\delta_j$ 
-la force d'attaque de $j$ à l'extérieur.\\
+% \noindent On note $i$ l'équipe à domicile et $j$ l'équipe extérieure. Le couple de 
+% scores $(x_{ij}, y_{ij})$ est modélisé comme suit : $X_{ij}$ suit une loi de Poisson 
+% de moyenne $\alpha_i \beta_j$, $Y_{ij}$ suit une loi de Poisson de moyenne 
+% $\gamma_i \delta_j$, et $X_{ij}$ et $Y_{ij}$ sont supposés indépendants. 
+% Les paramètres ont l'interprétation suivante : $\alpha_i$ représente la force 
+% d'attaque de l'équipe $i$ à domicile, $\beta_j$ la faiblesse défensive de l'équipe 
+% $j$ à l'extérieur, $\gamma_i$ la faiblesse défensive de $i$ à domicile, et $\delta_j$ 
+% la force d'attaque de $j$ à l'extérieur.\\
 
-\noindent Pour assurer l'identifiabilité du modèle, on impose les contraintes :
-\[
-\sum_i \alpha_i = \sum_i \beta_i \qquad \text{et} \qquad \sum_i \gamma_i = \sum_i \delta_i
-\]
-car les produits $\alpha_i \beta_j$ et $\gamma_i \delta_j$ sont invariants par 
-rééchelonnage simultané des deux facteurs.\\
+% \noindent Pour assurer l'identifiabilité du modèle, on impose les contraintes :
+% \[
+% \sum_i \alpha_i = \sum_i \beta_i \qquad \text{et} \qquad \sum_i \gamma_i = \sum_i \delta_i
+% \]
+% car les produits $\alpha_i \beta_j$ et $\gamma_i \delta_j$ sont invariants par 
+% rééchelonnage simultané des deux facteurs.\\
 
-\noindent La log-vraisemblance pour les buts à domicile s'écrit :
-\[
-\log L(\underline{\alpha}, \underline{\beta}) = \sum_{i} \sum_{j \neq i} 
-\left( -\alpha_i \beta_j + x_{ij} \log(\alpha_i \beta_j) - \log(x_{ij}!) \right)
-\]
+% \noindent La log-vraisemblance pour les buts à domicile s'écrit :
+% \[
+% \log L(\underline{\alpha}, \underline{\beta}) = \sum_{i} \sum_{j \neq i} 
+% \left( -\alpha_i \beta_j + x_{ij} \log(\alpha_i \beta_j) - \log(x_{ij}!) \right)
+% \]
 
-Les conditions du premier ordre donnent :
-\[
-\frac{\partial \log L}{\partial \alpha_i} = \sum_{j \neq i} 
-\left( -\beta_j + \frac{x_{ij}}{\alpha_i} \right) = 0
-\]
+% Les conditions du premier ordre donnent :
+% \[
+% \frac{\partial \log L}{\partial \alpha_i} = \sum_{j \neq i} 
+% \left( -\beta_j + \frac{x_{ij}}{\alpha_i} \right) = 0
+% \]
 
-ainsi, les estimateurs du maximum de vraisemblance $\hat{\alpha}_i$ et $\hat{\beta}_j$ 
-vérifient le système implicite :
-\[
-\hat{\alpha}_i = \frac{\sum_{j \neq i} x_{ij}}{\sum_{j \neq i} \hat{\beta}_j}
-\qquad \text{et} \qquad
-\hat{\beta}_j = \frac{\sum_{i \neq j} x_{ij}}{\sum_{i \neq j} \hat{\alpha}_i}
-\]
+% ainsi, les estimateurs du maximum de vraisemblance $\hat{\alpha}_i$ et $\hat{\beta}_j$ 
+% vérifient le système implicite :
+% \[
+% \hat{\alpha}_i = \frac{\sum_{j \neq i} x_{ij}}{\sum_{j \neq i} \hat{\beta}_j}
+% \qquad \text{et} \qquad
+% \hat{\beta}_j = \frac{\sum_{i \neq j} x_{ij}}{\sum_{i \neq j} \hat{\alpha}_i}
+% \]
 
-Ce système peut être résolu par Newton-Raphson, ce qui conduit à l'approximation :
-\[
-\hat{\alpha}_i = \frac{\sum_{j \neq i} x_{ij}}{\sqrt{S_x}}, \qquad
-\hat{\beta}_j = \frac{\sum_{i \neq j} x_{ij}}{\sqrt{S_x}}, \qquad
-S_x = \sum_i \sum_{j \neq i} x_{ij}
-\]
-où $S_x$ désigne le nombre total de buts marqués à domicile sur l'ensemble des matchs.
-Les paramètres $\hat{\gamma}_i$ et $\hat{\delta}_j$ sont estimés de façon analogue 
-à partir des $y_{ij}$.
+% Ce système peut être résolu par Newton-Raphson, ce qui conduit à l'approximation :
+% \[
+% \hat{\alpha}_i = \frac{\sum_{j \neq i} x_{ij}}{\sqrt{S_x}}, \qquad
+% \hat{\beta}_j = \frac{\sum_{i \neq j} x_{ij}}{\sqrt{S_x}}, \qquad
+% S_x = \sum_i \sum_{j \neq i} x_{ij}
+% \]
+% où $S_x$ désigne le nombre total de buts marqués à domicile sur l'ensemble des matchs.
+% Les paramètres $\hat{\gamma}_i$ et $\hat{\delta}_j$ sont estimés de façon analogue 
+% à partir des $y_{ij}$.
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Adaptation en rolling strict et Lissage Bayésien}
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% \subsection{Adaptation en rolling strict et Lissage Bayésien}
 
-Dans la formulation originale de Maher (1982), les paramètres sont estimés de 
-manière statique sur l'ensemble de la saison. Cette approche introduit un 
-\textit{data leakage} majeur, car des informations chronologiquement futures sont 
-utilisées pour prédire des matchs passés. De plus, la normalisation historique par 
-$\sqrt{S_x}$ entraîne un effondrement mathématique des paramètres au fil des saisons, ce 
-dénominateur croissant indéfiniment avec le nombre total de matchs joués dans la ligue.
+% Dans la formulation originale de Maher (1982), les paramètres sont estimés de 
+% manière statique sur l'ensemble de la saison. Cette approche introduit un 
+% \textit{data leakage} majeur, car des informations chronologiquement futures sont 
+% utilisées pour prédire des matchs passés. De plus, la normalisation historique par 
+% $\sqrt{S_x}$ entraîne un effondrement mathématique des paramètres au fil des saisons, ce 
+% dénominateur croissant indéfiniment avec le nombre total de matchs joués dans la ligue.
 
-Pour remédier à ces limites, nous adoptons un calcul en \textit{rolling strict} : à 
-l'instant du match $t$, les paramètres sont estimés uniquement à partir des données 
-des matchs joués strictement avant $t$. Afin de stabiliser ces estimations 
-face au problème d'absence ou de trop faible volume d'historique en début de saison, 
-un lissage bayésien (Bayesian smoothing) est appliqué. 
-Ce lissage combine les performances intrinsèques de l'équipe avec un prior 
-global, modélisé par la moyenne glissante de la ligue calculée jusqu'à l'instant $t$. 
+% Pour remédier à ces limites, nous adoptons un calcul en \textit{rolling strict} : à 
+% l'instant du match $t$, les paramètres sont estimés uniquement à partir des données 
+% des matchs joués strictement avant $t$. Afin de stabiliser ces estimations 
+% face au problème d'absence ou de trop faible volume d'historique en début de saison, 
+% un lissage bayésien (Bayesian smoothing) est appliqué. 
+% Ce lissage combine les performances intrinsèques de l'équipe avec un prior 
+% global, modélisé par la moyenne glissante de la ligue calculée jusqu'à l'instant $t$. 
 
-De plus, pour éviter que les valeurs de $\alpha, \beta$ et $\gamma, \delta$ 
-n'explosent, chaque coefficient est divisé par la moyenne de la ligue en cours.
+% De plus, pour éviter que les valeurs de $\alpha, \beta$ et $\gamma, \delta$ 
+% n'explosent, chaque coefficient est divisé par la moyenne de la ligue en cours.
 
-\noindent Pour un match opposant l'équipe $i$ (à domicile) à l'équipe $j$ (à l'extérieur) à 
-l'instant $t$, les quatre coefficients de force sont définis par :
+% \noindent Pour un match opposant l'équipe $i$ (à domicile) à l'équipe $j$ (à l'extérieur) à 
+% l'instant $t$, les quatre coefficients de force sont définis par :
 
-\[
-\alpha_i^{(t)} = \frac{X_i^{(t)} + K \cdot \bar{\mu}_{\text{ligue}}^{(t)}}
-{n_i^{(t)} + K} \cdot \frac{1}{\bar{\mu}_{\text{ligue}}^{(t)}}
-\]
+% \[
+% \alpha_i^{(t)} = \frac{X_i^{(t)} + K \cdot \bar{\mu}_{\text{ligue}}^{(t)}}
+% {n_i^{(t)} + K} \cdot \frac{1}{\bar{\mu}_{\text{ligue}}^{(t)}}
+% \]
 
-\[
-\delta_i^{(t)} = \frac{Y_i^{(t)} + K \cdot \bar{\nu}_{\text{ligue}}^{(t)}}
-{n_i^{(t)} + K} \cdot \frac{1}{\bar{\nu}_{\text{ligue}}^{(t)}}
-\]
+% \[
+% \delta_i^{(t)} = \frac{Y_i^{(t)} + K \cdot \bar{\nu}_{\text{ligue}}^{(t)}}
+% {n_i^{(t)} + K} \cdot \frac{1}{\bar{\nu}_{\text{ligue}}^{(t)}}
+% \]
 
-\[
-\beta_j^{(t)} = \frac{Y_j^{(t)} + K \cdot \bar{\mu}_{\text{ligue}}^{(t)}}
-{m_j^{(t)} + K} \cdot \frac{1}{\bar{\mu}_{\text{ligue}}^{(t)}}
-\]
+% \[
+% \beta_j^{(t)} = \frac{Y_j^{(t)} + K \cdot \bar{\mu}_{\text{ligue}}^{(t)}}
+% {m_j^{(t)} + K} \cdot \frac{1}{\bar{\mu}_{\text{ligue}}^{(t)}}
+% \]
 
-\[
-\gamma_j^{(t)} = \frac{X_j^{(t)} + K \cdot \bar{\nu}_{\text{ligue}}^{(t)}}
-{m_j^{(t)} + K} \cdot \frac{1}{\bar{\nu}_{\text{ligue}}^{(t)}}
-\]
+% \[
+% \gamma_j^{(t)} = \frac{X_j^{(t)} + K \cdot \bar{\nu}_{\text{ligue}}^{(t)}}
+% {m_j^{(t)} + K} \cdot \frac{1}{\bar{\nu}_{\text{ligue}}^{(t)}}
+% \]
 
-où :
-\begin{itemize}
-    \item $X_i^{(t)}$ et $Y_i^{(t)}$ représentent respectivement le cumul des 
-    buts marqués et encaissés à domicile par l'équipe $i$ avant le match $t$.
-    \item $X_j^{(t)}$ et $Y_j^{(t)}$ représentent respectivement le cumul des 
-    buts marqués et encaissés à l'extérieur par l'équipe $j$ avant le match $t$.
-    \item $n_i^{(t)}$ et $m_j^{(t)}$ désignent le nombre de matchs joués avant
-     $t$, respectivement à domicile par $i$ et à l'extérieur par $j$.
-    \item $\bar{\mu}_{\text{ligue}}^{(t)}$ et $\bar{\nu}_{\text{ligue}}^{(t)}$ sont 
-    les moyennes mobiles des buts marqués par match dans l'ensemble de la ligue 
-    (respectivement à domicile et à l'extérieur) calculées sur l'historique strictement 
-    avant $t$.
-    \item $K$ est l'hyperparamètre de lissage, fixé ici à $K = 5$. Il fait office 
-    de force de rappel en simulant l'équivalent de 5 matchs fictifs aux performances 
-    moyennes, ce qui s'accorde de manière cohérente avec la fenêtre glissante 
-    utilisée lors du prétraitement des données.
-\end{itemize}
+% où :
+% \begin{itemize}
+%     \item $X_i^{(t)}$ et $Y_i^{(t)}$ représentent respectivement le cumul des 
+%     buts marqués et encaissés à domicile par l'équipe $i$ avant le match $t$.
+%     \item $X_j^{(t)}$ et $Y_j^{(t)}$ représentent respectivement le cumul des 
+%     buts marqués et encaissés à l'extérieur par l'équipe $j$ avant le match $t$.
+%     \item $n_i^{(t)}$ et $m_j^{(t)}$ désignent le nombre de matchs joués avant
+%      $t$, respectivement à domicile par $i$ et à l'extérieur par $j$.
+%     \item $\bar{\mu}_{\text{ligue}}^{(t)}$ et $\bar{\nu}_{\text{ligue}}^{(t)}$ sont 
+%     les moyennes mobiles des buts marqués par match dans l'ensemble de la ligue 
+%     (respectivement à domicile et à l'extérieur) calculées sur l'historique strictement 
+%     avant $t$.
+%     \item $K$ est l'hyperparamètre de lissage, fixé ici à $K = 5$. Il fait office 
+%     de force de rappel en simulant l'équivalent de 5 matchs fictifs aux performances 
+%     moyennes, ce qui s'accorde de manière cohérente avec la fenêtre glissante 
+%     utilisée lors du prétraitement des données.
+% \end{itemize}
 
-Les espérances de buts finales ($\mu^{(t)}$ pour l'équipe à domicile et $\nu^{(t)}$ 
-pour l'équipe à l'extérieur) utilisées pour alimenter les lois de Poisson 
-indépendantes sont alors réajustées par l'avantage moyen du terrain et s'écrivent :
-\[
-\mu^{(t)} = \alpha_i^{(t)} \cdot \beta_j^{(t)} \cdot \bar{\mu}_{\text{ligue}}^{(t)} 
-\qquad \text{et} \qquad \nu^{(t)} = \gamma_j^{(t)} \cdot \delta_i^{(t)} \cdot 
-\bar{\nu}_{\text{ligue}}^{(t)}
-\]
-Cette formulation garantit que $\mu^{(t)}$ et $\nu^{(t)}$ conservent rigoureusement 
-leur sens statistique d'espérances de buts par match à l'instant $t$, tout en 
-éliminant les anomalies sur les scores extrêmes.
+% Les espérances de buts finales ($\mu^{(t)}$ pour l'équipe à domicile et $\nu^{(t)}$ 
+% pour l'équipe à l'extérieur) utilisées pour alimenter les lois de Poisson 
+% indépendantes sont alors réajustées par l'avantage moyen du terrain et s'écrivent :
+% \[
+% \mu^{(t)} = \alpha_i^{(t)} \cdot \beta_j^{(t)} \cdot \bar{\mu}_{\text{ligue}}^{(t)} 
+% \qquad \text{et} \qquad \nu^{(t)} = \gamma_j^{(t)} \cdot \delta_i^{(t)} \cdot 
+% \bar{\nu}_{\text{ligue}}^{(t)}
+% \]
+% Cette formulation garantit que $\mu^{(t)}$ et $\nu^{(t)}$ conservent rigoureusement 
+% leur sens statistique d'espérances de buts par match à l'instant $t$, tout en 
+% éliminant les anomalies sur les scores extrêmes.
 
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Approche statistique de Dixon et Coles}
 Dans la continuité du modèle de Maher, Dixon et Coles ont appliqué un coefficient $\gamma$ représentant 
 l'avantage de jouer à domicile, ainsi qu'une fonction $\tau$ pour gérer 

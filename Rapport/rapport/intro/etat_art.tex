@@ -1,0 +1,137 @@
+\section{Revue de littérature}
+\label{sec:art}
+
+
+% La prédiction de l'issue de matchs de football est un problème traité par un grand nombre de personnes, 
+% tant par des passionnés de foot, que des parieurs aguerris mais aussi 
+% par des statisticiens. 
+L'un des premiers résultats majeurs dans ce domaine est initié par 
+M. J. Maher \cite{maher}, lorsqu'il expose le fait que les buts marqués lors de rencontres 
+de football peut être simulé par une loi Poisson prenant comme paramètres la force 
+d'attaque et de défense des équipes.
+
+\subsection{Approche statistique classique}
+
+Les travaux de Maher \cite{maher} ont posé les fondements de la modélisation 
+du football en supposant que les buts marqués suivent des lois de Poisson 
+indépendantes. Mark Dixon et Stuart Coles \cite{dixon} ont prolongé cette approche 
+en introduisant deux améliorations majeures, la correction de la dépendance via l'ajout 
+d'un facteur multiplicatif $\tau$ pour corriger la sous-représentation des faibles 
+scores ($0-0, 1-0, 0-1, 1-1$) dans les modèles de Poisson standards, et une 
+pondération temporelle par l'intégration d'une fonction de pondération décroissante 
+$\phi(t-t_k)$ permettant de donner plus d'importance aux résultats récents et 
+de suivre la dynamique de performance des équipes.
+
+\noindent Bien que très interprétable grâce aux paramètres d'attaque ($\alpha$) et de 
+défense ($\beta$), cette approche reste limitée par l'absence de variables 
+contextuelles (blessures, cartons) et une sensibilité au choix du paramètre de pondération.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{Modèle de Poisson -- Maher (1982)}
+
+L'utilisation de la loi de Poisson repose sur l'hypothèse que la possession du ballon se transforme 
+en but avec une probabilité $p$ faible, mais que le nombre d'occasions est élevé. 
+On notera que la loi binomiale négative constitue une alternative plus flexible, 
+capable de modéliser la surdispersion éventuelle des scores, mais nous retenons 
+ici la loi de Poisson conformément à Maher (1982)\cite{maher}.\\
+
+\noindent On note $i$ l'équipe à domicile et $j$ l'équipe extérieure. Le couple de 
+scores $(x_{ij}, y_{ij})$ est modélisé comme suit : $X_{ij}$ suit une loi de Poisson 
+de moyenne $\alpha_i \beta_j$, $Y_{ij}$ suit une loi de Poisson de moyenne 
+$\gamma_i \delta_j$, et $X_{ij}$ et $Y_{ij}$ sont supposés indépendants. 
+Les paramètres ont l'interprétation suivante : $\alpha_i$ représente la force 
+d'attaque de l'équipe $i$ à domicile, $\beta_j$ la faiblesse défensive de l'équipe 
+$j$ à l'extérieur, $\gamma_i$ la faiblesse défensive de $i$ à domicile, et $\delta_j$ 
+la force d'attaque de $j$ à l'extérieur.\\
+
+\noindent Pour assurer l'identifiabilité du modèle, on impose les contraintes :
+\[
+\sum_i \alpha_i = \sum_i \beta_i \qquad \text{et} \qquad \sum_i \gamma_i = \sum_i \delta_i
+\]
+car les produits $\alpha_i \beta_j$ et $\gamma_i \delta_j$ sont invariants par 
+rééchelonnage simultané des deux facteurs.\\
+
+\noindent La log-vraisemblance pour les buts à domicile s'écrit :
+\[
+\log L(\underline{\alpha}, \underline{\beta}) = \sum_{i} \sum_{j \neq i} 
+\left( -\alpha_i \beta_j + x_{ij} \log(\alpha_i \beta_j) - \log(x_{ij}!) \right)
+\]
+
+Les conditions du premier ordre donnent :
+\[
+\frac{\partial \log L}{\partial \alpha_i} = \sum_{j \neq i} 
+\left( -\beta_j + \frac{x_{ij}}{\alpha_i} \right) = 0
+\]
+
+\noindent ainsi, les estimateurs du maximum de vraisemblance $\hat{\alpha}_i$ et $\hat{\beta}_j$ 
+vérifient le système implicite :
+\[
+\hat{\alpha}_i = \frac{\sum_{j \neq i} x_{ij}}{\sum_{j \neq i} \hat{\beta}_j}
+\qquad \text{et} \qquad
+\hat{\beta}_j = \frac{\sum_{i \neq j} x_{ij}}{\sum_{i \neq j} \hat{\alpha}_i}
+\]
+
+Ce système peut être résolu par Newton-Raphson, ce qui conduit à l'approximation :
+\[
+\hat{\alpha}_i = \frac{\sum_{j \neq i} x_{ij}}{\sqrt{S_x}}, \qquad
+\hat{\beta}_j = \frac{\sum_{i \neq j} x_{ij}}{\sqrt{S_x}}, \qquad
+S_x = \sum_i \sum_{j \neq i} x_{ij}
+\]
+où $S_x$ désigne le nombre total de buts marqués à domicile sur l'ensemble des matchs.
+Les paramètres $\hat{\gamma}_i$ et $\hat{\delta}_j$ sont estimés de façon analogue 
+à partir des $y_{ij}$.
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{Approche statistique de Dixon et Coles}
+Dans la continuité du modèle de Maher, Dixon et Coles ont ajouté un coefficient $\gamma$ 
+représentant l'avantage de jouer à domicile, ainsi qu'une fonction $\tau$ pour gérer 
+les petits scores $x$-$y$ avec $x,y \in \left\{ 0,1 \right\} $. En effet, l'hypothèse d'indépendance 
+des buts initiée par Maher est relaxée par Dixon et Coles pour les faibles scores mais conservée pour 
+les scores plus importants. Ils ajoutent également une fonction $\phi$ pondérant les matchs récent.
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\subsection{Différentes modélisations}
+
+Egidi et Torelli \cite{egidi} enrichissent l'analyse en comparant, via une 
+approche bayésienne, deux types de modèles. Dans un premier temps Result-based par 
+une modélisation multinomiale de l'issue (1, X, 2) utilisant des modèles probit
+\footnote{Le modèle probit utilise la fonction de répartition de la loi normale 
+centrée réduite pour modéliser la probabilité d'un événement binaire ou multinomial.} 
+ou logit\footnote{Le modèle logit transforme les probabilités (comprises entre 0 et 1) 
+en valeurs réelles via la fonction log-odds $ln(p/(1-p)$), facilitant ainsi les calculs 
+en inférence bayésienne.}. 
+Cette approche est particulièrement pertinente lors des phases finales de tournois où 
+les écarts de niveau sont faibles, bien qu'elle ignore l'ampleur des scores 
+(ex: une victoire 5-0 est traitée comme un 1-0). Puis, Goal-based, ici la modélisation 
+est basée sur une loi de Poisson bivariée permettant d'inclure un paramètre de 
+dépendance ($\lambda_3$) entre les buts. Elle s'avère plus efficace lorsque 
+les écarts de niveau sont élevés.
+
+
+\noindent L'utilisation de l'inférence par chaînes de Markov de Monte Carlo (MCMC) permet 
+une quantification précise de l'incertitude, bien qu'elle nécessite des ressources 
+de calcul importantes par rapport au maximum de vraisemblance.
+
+\subsection{Apprentissage automatique}
+
+Carloni \textit{et al.} \cite{carloni} ainsi que Fátima Rodrigues et Ângelo Pinto \cite{rodrigues} explorent le potentiel des algorithmes 
+d'apprentissage supervisé (KNN, SVM, Random Forest, Naive Bayes) et des réseaux 
+de neurones artificiels (ANN) à quatre couches. Contrairement aux approches 
+précédentes, ces modèles ne nécessitent aucune hypothèse a priori sur la 
+distribution des buts. 
+Leur méthodologie repose sur un nettoyage rigoureux des données (réduction de 
+47 à 31 variables) et l'utilisation de la \textit{prediction accuracy} et du 
+retour sur investissement (ROI) comme métriques de performance. Bien que l'ANN 
+soit identifié comme le modèle le plus performant (avec un ROI de 26\% sur un 
+échantillon test), ces modèles souffrent d'un manque d'explicabilité et d'une 
+sensibilité au découpage des données (\textit{train/test split}), qui peut ne 
+pas respecter la chronologie des matchs.

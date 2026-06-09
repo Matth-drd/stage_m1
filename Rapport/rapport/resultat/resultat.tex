@@ -1,0 +1,27 @@
+\chapter{Résultat}
+
+
+\begin{figure}[H]
+    \includegraphics[width=\textwidth]{../../plot/res_ML_MLP.png}
+    \caption{Comparaison des modèles et du MLP}
+    \label{fig:mlp_ml}
+\end{figure}
+
+Sur la figure \ref{fig:mlp_ml} nous avons comparer les modèles ML entre eux. La métrique utilisée 
+pour la comparaison et le ROI \ref{sec:roi} que nous avons implémenté de deux façons différentes. 
+Dans un premier temps avec une mise fixe à 10€ dans un second temps afin d'essayer d'améliorer les 
+profits nous avons mis en place une mise dynamique. En fonction du seuil de confience, ie de la 
+probabilité de la prédiction nous adpatons la mise. 
+Par exemple pour une probabilité compirse entre 0.5 et 0.6 la mise sera de 10, entre 0.6 et 0.7 
+la mise et de 20 au dela de 0.7 la mise est de 30.
+
+Nous pouvons donc observer que le modèle le plus rentable semble être le SVM à noyau RBF. 
+De plus on observe que la stratégie mélant seuil optimal et mise dynamique permet d'obtenir un retour sur 
+investissement de 5.71\% comparer à 4.9 en utilisant simplement le seuil optimal. 
+
+
+\begin{figure}[H]
+    \includegraphics[width=\textwidth]{../../plot/res_ML_MLP_metrique.png}
+    \caption{Comparaison des métriques modèles et du MLP}
+    \label{fig:mlp_ml_métrique}
+\end{figure}

@@ -1,21 +1,196 @@
-\chapter{Modèles}
+\chapter{Modèles étudiés}
 \label{chap:modeles}
 
-\section{Implémentation des modèles}
-\label{sec:modeles}
+Dans ce chapitre, nous détaillons l'implémentation et la stratégie d'optimisation des différents 
+modèles de Machine Learning retenus. L'objectif est de prédire l'issue binaire du match, formalisée 
+par la variable cible $y \in \{0, 1\}$, où $1$ désigne une victoire à domicile (\texttt{Hvs}) et 
+$0$ une non-victoire (match nul ou victoire extérieure). Plusieurs approches seront comparées, en 
+cohérence avec la littérature recensée : une approche statistique (régression logistique, modèle de 
+Poisson), des approches ensemblistes (Random Forest, Gradient Boosting) et, enfin, une approche 
+par réseau de neurones, telle qu'explorée par Carloni \textit{et al.}\cite{carloni}.\\
+Les performances seront évaluées sur un ensemble de test chronologique (saisons les plus récentes) 
+afin d'éviter tout biais temporel, en utilisant des métriques adaptées : le F1-score, le Brier-Score, 
+la log-loss et le ROI, que nous détaillerons dans le chapitre \ref{chap:métriques}.
 
-Dans cette section, nous détaillons l'implémentation des différents modèles. 
-Plusieurs approches seront comparées, en cohérence avec la littérature recensée, une 
-approche statistiques (régression logistique, modèle de poisson), ensemblistes (Random Forest, Gradient 
-Boosting). 
-% Enfin, une approche par réseau de neurones, comme explorés par Carloni 
-% \textit{et al.}\cite{carloni}.
 
+\section{Modèles statistiques}
+\subsection{Poisson de Maher}
+\subsubsection{Adaptation en rolling strict et Lissage Bayésien}
 
-Les performances seront évaluées sur un ensemble de test chronologique 
-(saisons les plus récentes) afin d'éviter tout biais temporel, en utilisant 
-des métriques adaptées : F1-score \ref{sec:f1}, Brier-Score \ref{sec:BS}, log-loss 
-\ref{sec:log-loss} et ROI \ref{sec:roi}, que nous détaillerons dans \ref{chap:métriques}.
+Dans la formulation originale de Maher (1982), les paramètres sont estimés de 
+manière statique sur l'ensemble de la saison. Cette approche introduit un 
+\textit{data leakage} majeur, car des informations chronologiquement futures sont 
+utilisées pour prédire des matchs passés. De plus, la normalisation historique par 
+$\sqrt{S_x}$ entraîne un effondrement mathématique des paramètres au fil des saisons, ce 
+dénominateur croissant indéfiniment avec le nombre total de matchs joués dans la ligue.
+
+Pour remédier à ces limites, nous adoptons un calcul en \textit{rolling strict} : à 
+l'instant du match $t$, les paramètres sont estimés uniquement à partir des données 
+des matchs joués strictement avant $t$. Afin de stabiliser ces estimations 
+face au problème d'absence ou de trop faible volume d'historique en début de saison, 
+un lissage bayésien (Bayesian smoothing) est appliqué. 
+Ce lissage combine les performances intrinsèques de l'équipe avec un prior 
+global, modélisé par la moyenne glissante de la ligue calculée jusqu'à l'instant $t$. 
+
+De plus, pour éviter que les valeurs de $\alpha, \beta$ et $\gamma, \delta$ 
+n'explosent, chaque coefficient est divisé par la moyenne de la ligue en cours.
+
+\noindent Pour un match opposant l'équipe $i$ (à domicile) à l'équipe $j$ (à l'extérieur) à 
+l'instant $t$, les quatre coefficients de force sont définis par :
+
+\[
+\alpha_i^{(t)} = \frac{X_i^{(t)} + K \cdot \bar{\mu}_{\text{ligue}}^{(t)}}
+{n_i^{(t)} + K} \cdot \frac{1}{\bar{\mu}_{\text{ligue}}^{(t)}}
+\]
+
+\[
+\delta_i^{(t)} = \frac{Y_i^{(t)} + K \cdot \bar{\nu}_{\text{ligue}}^{(t)}}
+{n_i^{(t)} + K} \cdot \frac{1}{\bar{\nu}_{\text{ligue}}^{(t)}}
+\]
+
+\[
+\beta_j^{(t)} = \frac{Y_j^{(t)} + K \cdot \bar{\mu}_{\text{ligue}}^{(t)}}
+{m_j^{(t)} + K} \cdot \frac{1}{\bar{\mu}_{\text{ligue}}^{(t)}}
+\]
+
+\[
+\gamma_j^{(t)} = \frac{X_j^{(t)} + K \cdot \bar{\nu}_{\text{ligue}}^{(t)}}
+{m_j^{(t)} + K} \cdot \frac{1}{\bar{\nu}_{\text{ligue}}^{(t)}}
+\]
+
+où :
+\begin{itemize}
+    \item $X_i^{(t)}$ et $Y_i^{(t)}$ représentent respectivement le cumul des 
+    buts marqués et encaissés à domicile par l'équipe $i$ avant le match $t$.
+    \item $X_j^{(t)}$ et $Y_j^{(t)}$ représentent respectivement le cumul des 
+    buts marqués et encaissés à l'extérieur par l'équipe $j$ avant le match $t$.
+    \item $n_i^{(t)}$ et $m_j^{(t)}$ désignent le nombre de matchs joués avant
+     $t$, respectivement à domicile par $i$ et à l'extérieur par $j$.
+    \item $\bar{\mu}_{\text{ligue}}^{(t)}$ et $\bar{\nu}_{\text{ligue}}^{(t)}$ sont 
+    les moyennes mobiles des buts marqués par match dans l'ensemble de la ligue 
+    (respectivement à domicile et à l'extérieur) calculées sur l'historique strictement 
+    avant $t$.
+    \item $K$ est l'hyperparamètre de lissage, fixé ici à $K = 5$. Il fait office 
+    de force de rappel en simulant l'équivalent de 5 matchs fictifs aux performances 
+    moyennes, ce qui s'accorde de manière cohérente avec la fenêtre glissante 
+    utilisée lors du prétraitement des données.
+\end{itemize}
+
+Les espérances de buts finales ($\mu^{(t)}$ pour l'équipe à domicile et $\nu^{(t)}$ 
+pour l'équipe à l'extérieur) utilisées pour alimenter les lois de Poisson 
+indépendantes sont alors réajustées par l'avantage moyen du terrain et s'écrivent :
+\[
+\mu^{(t)} = \alpha_i^{(t)} \cdot \beta_j^{(t)} \cdot \bar{\mu}_{\text{ligue}}^{(t)} 
+\qquad \text{et} \qquad \nu^{(t)} = \gamma_j^{(t)} \cdot \delta_i^{(t)} \cdot 
+\bar{\nu}_{\text{ligue}}^{(t)}
+\]
+Cette formulation garantit que $\mu^{(t)}$ et $\nu^{(t)}$ conservent rigoureusement 
+leur sens statistique d'espérances de buts par match à l'instant $t$, tout en 
+éliminant les anomalies sur les scores extrêmes.
+
+%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%
+\subsection{Dixon-Coles}
+Dans l'introduction, nous avions abordé les améliorations apportées par Dixon-Coles. 
+Nous les détaillons à présent plus en profondeur.
+\[
+\tau(x, y) = 
+\begin{cases} 
+    1 - \mu \nu \rho & \text{si } x=0, y=0 \\ 
+    1 + \mu \rho     & \text{si } x=0, y=1 \\ 
+    1 + \nu \rho         & \text{si } x=1, y=0 \\ 
+    1 - \rho             & \text{si } x=1, y=1 \\ 
+    1                    & \text{sinon}
+\end{cases}
+\]
+
+\noindent Nous avons ainsi, $$L(\alpha, \beta, \gamma, \delta, \rho) = \tau(x, y, \mu, \nu, \rho) \times 
+\frac{\mu^x e^{-\mu}}{x!} \times \frac{\nu^y e^{-\nu}}{y!}$$
+D'où : $\log L=\log(\tau)+x\log(\mu)-\mu-\log(x!) + y\log(\nu)-\nu-\log(y!)$. 
+Nous cherchons $\rho$ qui maximise cette log-vraisemblance. Nous avons donc, 
+$$\frac{\partial}{\partial\rho}\log L = \frac{\tau'}{\tau} $$ 
+or 
+\[\tau'(x,y)=
+\begin{cases} 
+    - \mu \nu  & \text{si } x=0, y=0 \\ 
+    \mu        & \text{si } x=0, y=1 \\ 
+    \nu        & \text{si } x=1, y=0 \\ 
+    - 1        & \text{si } x=1, y=1 \\ 
+    0          & \text{sinon}
+\end{cases}
+\]
+
+$\rho^*$ vérifie $\partial_\rho \log L(\rho^*) = 0$
+Dans notre cas, étant donné $N$ matchs, nous avons : 
+$$\partial_\rho \log L = \sum_{1}^{N}\frac{\tau'(x_k,y_k)}{\tau(x_k,y_k)}$$
+Autrement dit,
+$$ \partial_\rho \log L =
+\sum_{k \in \{0-0\}} \frac{-\mu_k \nu_k}{1 - \mu_k \nu_k \rho^*} 
++ \sum_{k \in \{0-1\}} \frac{\mu_k}{1 + \mu_k \rho^*} 
++ \sum_{k \in \{1-0\}} \frac{\nu_k}{1 + \nu_k \rho^*} 
++ \sum_{k \in \{1-1\}} \frac{-1}{1 - \rho^*}$$
+
+Une modification supplémentaire est apportée par Dixon-Coles afin de gérer l'importance des matchs 
+celon leurs ancienneté. Pour cela, ils ajoutent une fonction $\phi$ définie par : 
+$$\phi_k = e^{-\xi \dot t_k}$$ 
+cette fonction permet de donner plus d'importance aux matches récents. 
+
+\subsubsection{Prédiction de l'issue du match}
+
+Comme nous l'avons précisé en introduction de ce rapport, deux prédictions sont majoritaires. L'une basée sur 
+le nombre de buts, l'autre sur l'issue du match. Les modèles statistique implémentés se basent sur le nombre de buts. 
+En effet, la distribution de Poisson décrit l'évolution du nombre de buts. Cependant, les modèles de machine 
+learning utilisés, eux, prédisent l'issue des matchs, nous devons donc effectuer cette transition afin de pouvoir 
+comparer l'approche ML avec l'approche statistique. 
+
+Pour cela, selon Maher, les buts marqués par l'équipe A et par l'équipe B sont indépendants. Par suite, la probabilité 
+$P(X=x, Y=y) = P(X=x) \times P(Y=y)$ ce qui nous permet de construire la matrice $M$ telle que 
+$M_{i,j} = P(X=i, Y=j)$ figure \ref{fig:matricMaher}. Ainsi, la probabilité que l'équipe A gagne correspond à la probabilité qu'elle 
+marque plus de buts que l'équipe B. Autrement dit, la victoire de l'équipe à domicile correspond aux coefficients de 
+la matrice tel que $i>j$. Le match nul correspond à la diagonale, et la victoire extérieur correspond à la matrice triangulaire 
+supérieure $i<j$ figure \ref{fig:matrixMaherSeparation}.
+
+\begin{figure}[H]
+    \centering
+    % --- Minipage Gauche (Matrice de Maher) ---
+    \begin{minipage}[b]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{../../plot/exemple_matrix.png}
+        \caption{Matrice de Maher}
+        \label{fig:matricMaher}
+    \end{minipage}
+    \hfill % Espace élastique pour repousser les deux blocs sur les bords
+    % --- Minipage Droite (Séparation en 3 matrices) ---
+    \begin{minipage}[b]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{../../plot/ex_matrix_DC.png}
+        \caption{Matrice de Dixon \& Coles}
+        \label{fig:matricDC}
+    \end{minipage}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    % --- Image du Haut ---
+    \includegraphics[width=0.85\textwidth]{../../plot/ex_matrix.png}
+    \caption{Modèle de Maher : Séparation en 3 matrices distinctes}
+    \label{fig:matrixMaherSeparation}
+    
+    \vspace{0.5cm} % Ajuste l'espace vertical entre les deux images si besoin
+    
+    % --- Image du Bas ---
+    \includegraphics[width=0.85\textwidth]{../../plot/ex_matrix_DC_2.png}
+    \caption{Modèle de Dixon-Coles : Séparation en 3 matrices distinctes}
+    \label{fig:matrixDCSeparation}
+\end{figure}
+
+Dans le cas de Dixon \& Coles, l'hypothèse d'indépendance n'est pas tout a fait la même dans le cas des score faibles. 
+Pour traiter ce cas, ils ajoutent un facteur $\tau$, la matrice $M$ devient donc : 
+$M_{i,j}=\tau(i,j)\times P(X=i)\times P(Y=j)$.
+
+\section{Modèles de machine learning}
+\label{sec:modeles ML}
 
 \subsection{Baseline}
 
@@ -32,7 +207,7 @@ adaptée à la classification binaire (victoire à domicile vs. non-victoire).
 L'un de ses principaux atouts réside dans sa capacité à fournir des probabilités 
 directement exploitables facilitant le calcul du ROI \ref{sec:roi}. 
 
-Afin de maximiser ses performances, nous comparons une version dite de Base avec une 
+\noindent Afin de maximiser ses performances, nous comparons une version dite de Base avec une 
 version optimisée par Random Search\footnote{Le Random Search sélectionne au hasard des 
 combinaisons d'hyperparamètres dans des plages prédéfinies afin de trouver la configuration 
 la plus performante.}. 
@@ -67,7 +242,7 @@ garantissant la robustesse des prédictions sur les saisons futures.
 \subsection{SVM (Support Vector Machine)}
 
 Le SVM à noyau de fonction de base radiale (RBF) adopte une approche géométrique. 
-Il projette notre espace de caractéristiques de forme et de classement dans une 
+Il projette notre espace de données dans une 
 dimension supérieure afin de trouver l'hyperplan de séparation optimal à marge 
 maximale entre les matchs gagnés et perdus.
 
@@ -75,19 +250,43 @@ Le noyau RBF est très efficace lorsque la frontière de décision est fortement
 non linéaire. Cependant, le SVM ne fournit pas nativement de probabilités, mais 
 des scores de distance à l'hyperplan. Pour intégrer ce modèle nous activons la méthode 
 de calibration de Platt (\texttt{probability=True}), 
-convertissant ces scores en probabilités. Cela nous permet d'évaluer la fiabilité 
-de ses prédictions au même titre que les autres algorithmes.
+convertissant ces scores en probabilités. Cela nous permet d'évaluer les prédictions 
+au même titre que les autres algorithmes.
 
 \subsection{LightGBM}
 
-Enfin, nous avons également utilisé LightGBM \cite{chenlgbm} 
-(Light Gradient Boosting Machine), c'est une déclinaison optimisée 
-du Gradient Boosting développée par Microsoft. Sa spécificité 
-repose sur une croissance des arbres par feuille 
-(leaf-wise) plutôt que par niveau (level-wise), ce qui lui confère une 
-vitesse de convergence supérieure et une excellente gestion des interactions 
-de variables à grande échelle.
+Nous avons également implméenté un LightGMB \cite{chenlgbm}. 
+LightGBM (Light Gradient Boosting Machine) est une implémentation 
+optimisée du Gradient Boosting développée par Microsoft. Sa particularité réside dans une 
+croissance des arbres par feuille (\textit{leaf-wise} \ref{fig:leaf_tree}) plutôt que par niveau 
+(\textit{level-wise} \ref{fig:level_tree}) : à chaque itération, seule la feuille offrant le 
+gain maximal est divisée, ce qui produit une 
+erreur plus faible à nombre de feuilles égal, mais au prix d'un risque accru de surapprentissage 
+sur de petits jeux de données. Comme pour les autres modèles ensemblistes, nous comparons une version 
+de base et une version optimisée par Random Search.
+
+\begin{figure}[H]
+    \centering
+    % --- Image du Haut ---
+    \includegraphics[width=0.85\textwidth]{../../plot/leaf_tree.png}
+    \label{fig:leaf_tree}
+    \vspace{0.5cm} % Ajuste l'espace vertical entre les deux images si besoin
+    % --- Image du Bas ---
+    \includegraphics[width=0.85\textwidth]{../../plot/level_tree.png}
+    \label{fig:level_tree}
+    \centering
+    \caption{extrait de la documentation de LightGBM. 
+    https://lightgbm.readthedocs.io/en/stable/Features.html}
+\end{figure}
 
 
+\subsection{Réseau de neurones}
 
-% \subsection{Réseau de neurones}
+Nous avons également implémenté un Perceptron Multicouche (\textit{Multi-Layer Perceptron}, MLP) 
+tel qu'exploré par Carloni \textit{et al.}\cite{carloni}. Ce modèle se distingue des approches 
+précédentes par l'utilisation d'un espace de features dédié (\texttt{ft\_nn}), potentiellement 
+plus riche, et d'une normalisation stricte par \texttt{StandardScaler}, indispensable à la 
+convergence du réseau.
+La version de base est composée d'une couche cachée de 100 neurones, avec le solveur Adam, une 
+régularisation L2 ($\alpha = 10^{-4}$) et une tolérance de convergence stricte 
+($\texttt{tol} = 10^{-9}$). Une version optimisée est ensuite obtenue par Random Search.

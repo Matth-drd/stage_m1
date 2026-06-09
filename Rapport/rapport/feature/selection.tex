@@ -1,10 +1,10 @@
-\chapter{Sélection et Visualisation}
+\chapter{Méthodologie}
 
 Dans ce chapitre, nous expliquons quelles caractéristiques (features) 
-sont conservées, et quelles méthodes ont été utiliser pour les choisir. Nous abordons 
+sont conservées, et quelles méthodes ont été utilisées pour les choisir. Nous abordons 
 également l'étape de visualisation de nos données.
 
-\section{Sélection des descripteurs}
+\section{Sélection des variables}
 %%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%
 Nous avons appliqué trois méthodes complémentaires --- RFECV, ANOVA (\texttt{SelectKBest} avec $f\_classif$) 
@@ -103,7 +103,7 @@ méthodes sont croisées.
 
 
 % % =============================================================================
-\section{Sélection pour le réseau de neurones — méthode ECD}
+\subsection{Sélection pour le réseau de neurones — méthode ECD}
 % =============================================================================
 
 Pour le réseau de neurones (\texttt{MLPClassifier}), une sélection dédiée est réalisée
@@ -145,7 +145,6 @@ Damage}), inspirée des travaux de Leray et Gallinari~\cite{leray}.
 % tolérance analogue à un test de Fisher), on retient le modèle le plus parcimonieux, c'est-à-dire
 % celui comportant le moins de descripteurs.
 
-\subsection{Résultat}
 
 La procédure retient $6$ descripteurs pour le réseau de neurones :
 
@@ -169,9 +168,9 @@ des deux approches de sélection.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \section{Visualisation}
-Suite à cette étape de sélections, nous avons choisis de conserver les descripteurs communs 
+Suite à cette étape de sélections, nous avons choisi de conserver les descripteurs communs 
 aux trois méthode RFECV, ANOVA et mutual information, ainsi, 20 descripteurs sont 
-conservées pour les modèles de classification: 
+conservés pour les modèles de classification: 
 
 \noindent ['FT\_Adef', 'FT\_Aforme', 'FT\_Elo\_A', 'FT\_Elo\_H', 'FT\_Elo\_dif', 'FT\_Elo\_ratio', 'FT\_Hforme', 'FT\_forme\_diff',
 'FT\_forme\_ratio', 'FT\_prec\_diff', 'FT\_prec\_ratio', 'HT\_Elo\_A', 'HT\_Elo\_H', 'HT\_Elo\_dif', 'HT\_Elo\_ratio',
@@ -279,8 +278,12 @@ Nous avons également comparé la séparabilité des classes en utilisant la cib
 \end{figure}
 
 
-Les figures \ref{fig:Boxplot_20} et \ref{fig:Boxplot_6} montre la différence entre 
-les features sélectionnés.
+% Les figures \ref{fig:Boxplot_20} et \ref{fig:Boxplot_6} montrent la différence entre 
+% les features sélectionnés.
 
 \noindent Suite à cette étape de visualisation, nous pouvons constater que les données ne sont 
 visiblement pas séparables. Cependant, un certain nombre de matchs restent relativement isolés
+
+
+
+\input{metrique/metrique.tex}
