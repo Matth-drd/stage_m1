@@ -618,19 +618,6 @@ axs[1].legend(loc="upper left")
 plt.tight_layout()
 plt.show()
 
-# %% sauvegarde des modèles
-
-import joblib
-import os
-
-os.makedirs("models", exist_ok=True)
-joblib.dump(scaler, "models/scaler.pkl")
-joblib.dump(scaler_mlp, "models/scaler_mlp.pkl")
-
-for name, (model, X_te) in trained_models.items():
-    nom_fichier = name.replace(" ", "_").replace("(", "").replace(")", "")
-    joblib.dump(model, f"models/{nom_fichier}.pkl")
-    print(f"Sauvegardé : models/{nom_fichier}.pkl")
 
 # %% =========================================================================
 # EVALUATION : COMPARAISON DES MISES FIXES VS MISES DYNAMIQUES
@@ -713,7 +700,7 @@ for c in ['ROI Std 0.50 (%)', 'Profit Std','ROI Seuil opti (%)', 'Profit Sécu',
     df_comparatif[c] = pd.to_numeric(df_comparatif[c])
 
 pd.set_option('display.expand_frame_repr', False)
-print(df_comparatif.sort_values("Profit Dyn", ascending=False).to_string(index=False))
+print(df_comparatif.sort_values("ROI Dyn Opti (%)", ascending=False).to_string(index=False))
 print("=" * 115)
 # %%
 # ===================================================================================================================
@@ -786,5 +773,16 @@ df_metriques = pd.DataFrame(bilan_metriques)
 print(df_metriques.sort_values("Log-Loss", ascending=True).to_string(index=False))
 print("=" * 130)
 
-# %%
-pd.reset_option('all')
+# %% sauvegarde des modèles
+
+import joblib
+import os
+
+os.makedirs("models", exist_ok=True)
+joblib.dump(scaler, "models/scaler.pkl")
+joblib.dump(scaler_mlp, "models/scaler_mlp.pkl")
+
+for name, (model, X_te) in trained_models.items():
+    nom_fichier = name.replace(" ", "_").replace("(", "").replace(")", "")
+    joblib.dump(model, f"models/{nom_fichier}.pkl")
+    print(f"Sauvegardé : models/{nom_fichier}.pkl")
