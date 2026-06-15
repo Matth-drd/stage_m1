@@ -1,27 +1,78 @@
 \chapter{Résultat}
-
-
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+L'évaluation financière des modèles repose sur une stratégie de \textit{value bet} à seuil adaptatif.
+Pour chaque modèle $m$, un seuil optimal $\hat{s}_m$ est déterminé %sur le jeu de \textit{train} 
+en maximisant
+le profit net cumulé parmi les valeurs $s \in [0{,}40\,;\,0{,}85]$ par pas de $0{,}01$.
+Un pari est déclenché sur le match $i$ si et seulement si deux conditions sont 
+simultanément vérifiées :
+\begin{enumerate}
+  \item la probabilité prédite $\hat{p}_i$ dépasse le seuil du modèle : $\hat{p}_i \geq \hat{s}_m$ ;
+  \item le pari constitue un \textit{value bet}, c'est-à-dire que la probabilité implicite du bookmaker
+        est inférieure à celle du modèle : $\hat{p}_i > 1 / c_i$, où $c_i$ désigne la cote proposée.
+\end{enumerate}
+La mise unitaire suit une stratégie par paliers selon le niveau de confiance :
+$10$\,€ lorsque $\hat{s}_m \leq \hat{p}_i < \hat{s}_m + 0{,}10$,
+et $30$\,€ lorsque $\hat{p}_i \geq \hat{s}_m + 0{,}10$.
+En l'absence de pari éligible, aucune mise n'est engagée.
+Les seuils retenus après optimisation varient entre $0{,}62$ (MLP) et $0{,}81$ (Random Forest),
+reflétant la dispersion des distributions de probabilités selon les architectures.
+La performance financière est mesurée par le retour sur investissement (ROI) \ref{sec:roi}. 
+Une autre stratégie est également mise en place : le principe est le même, 
+seule la mise reste fixe à 10 €.
+Nous pouvons ainsi comparer les deux stratégies de mise et ainsi chercher la meilleure.
+%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%
 \begin{figure}[H]
-    \includegraphics[width=\textwidth]{../../plot/res_ML_MLP.png}
-    \caption{Comparaison des modèles et du MLP}
+    \includegraphics[width=\textwidth]{../../plot/maj/ml_stat_4/bilan_financier.png}
+    \caption{Comparaison des modèles}
     \label{fig:mlp_ml}
 \end{figure}
 
-Sur la figure \ref{fig:mlp_ml} nous avons comparer les modèles ML entre eux. La métrique utilisée 
-pour la comparaison et le ROI \ref{sec:roi} que nous avons implémenté de deux façons différentes. 
-Dans un premier temps avec une mise fixe à 10€ dans un second temps afin d'essayer d'améliorer les 
-profits nous avons mis en place une mise dynamique. En fonction du seuil de confience, ie de la 
-probabilité de la prédiction nous adpatons la mise. 
-Par exemple pour une probabilité compirse entre 0.5 et 0.6 la mise sera de 10, entre 0.6 et 0.7 
-la mise et de 20 au dela de 0.7 la mise est de 30.
+\noindent Sur la figure \ref{fig:mlp_ml} nous avons comparé les modèles ML ainsi que les modèles Poisson. 
+La métrique utilisée 
+pour la comparaison est le ROI \ref{sec:roi} que nous avons implémenté de deux façons différentes. 
+Dans un premier temps avec une mise fixe à 10 €, dans un second temps afin d'essayer d'améliorer les 
+profits nous avons mis en place une mise dynamique. En fonction du seuil de confiance, ie de la 
+probabilité de la prédiction nous adaptons la mise. 
+Par exemple pour une probabilité comprise entre 0.5 et 0.6 la mise sera de 10, entre 0.6 et 0.7 
+la mise est de 20 au dela de 0.7 la mise est de 30.
 
-Nous pouvons donc observer que le modèle le plus rentable semble être le SVM à noyau RBF. 
-De plus on observe que la stratégie mélant seuil optimal et mise dynamique permet d'obtenir un retour sur 
-investissement de 5.71\% comparer à 4.9 en utilisant simplement le seuil optimal. 
+\noindent Nous pouvons donc observer que le modèle le plus rentable semble être le SVM à noyau RBF. 
+De plus on observe que la stratégie mêlant seuil optimal et mise dynamique permet d'obtenir un retour sur 
+investissement de 5.71\% comparé à 4.9 en utilisant simplement le seuil optimal. 
 
 
 \begin{figure}[H]
-    \includegraphics[width=\textwidth]{../../plot/res_ML_MLP_metrique.png}
-    \caption{Comparaison des métriques modèles et du MLP}
+    \includegraphics[width=\textwidth]{../../plot/maj/ml_stat_4/metriq.png}
+    \caption{Comparaison des métriques}
     \label{fig:mlp_ml_métrique}
 \end{figure}
+
+
+\noindent Sur ce tableau nous avons comparé les métriques détaillées dans \ref{chap:métriques}. Nous pouvons 
+ainsi voir que tous les modèles dépassent la Baseline, cependant, le meilleur score f1 reste celui 
+de la baseline. Cela s'explique par le fait que les modèles sont entraînés de sorte à optimiser le profit 
+et non la qualité prédictive. 
+
+Le principal objectif visant à dépasser la prédiction naïve est atteint, en 
+effet sur les deux tableaux, nous observons bien que les modèles ML sont meilleurs.
+
+
+
+\begin{figure}[H]
+    \includegraphics[width=\textwidth]{../../plot/maj/ml_stat_4/cdd.png}
+    \caption{Diagramme de différence critique}
+    \label{fig:cdd_ml_stat}
+\end{figure}
+
+\noindent La figure \ref{fig:cdd_ml_stat} permet de classer les modèles entre eux 
+mais également par rapport au bookmaker Bwin. Les "crossbar" regroupent les modèles 
+ne présentant pas de différence significative, ainsi plusieurs groupes peuvent être 
+construits. Le plus important reste le groupe des équivalents du bookmaker, 
+[Bwin, SVM (opti), RandomForest (opti), LogistiqueRegression (opti), LightGBM (opti)].
+
+
+\input{conclusion/conclusion.tex}
+

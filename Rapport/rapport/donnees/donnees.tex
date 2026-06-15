@@ -1,8 +1,8 @@
 \chapter{Les données}
-
+\label{chap:data}
 
 \section{Constitution de la base de données}
-\label{sec:data}
+
 
 \subsection{Source}
 
@@ -158,7 +158,7 @@ divisions par zéro.
 \section{Transformation et Normalisation des Données des bookmakers}
 Afin d'établir une comparaison entre notre modèle de classification 
 binaire et les bookmakers, nous avons procédé à une restructuration des 
-cotes des bookmakers (Bet365, Pinnacle, etc.). La méthodologie employée est la suivante, 
+cotes des bookmakers (Bet365, Pinnacle, etc.) \cite{rogier}. La méthodologie employée est la suivante, 
 dans un premier temps inversion des cotes afin de convertir les cotes décimales en 
 probabilités implicites brutes selon la formule $P_{brute} = \frac{1}{\text{cote}}$.
 Par la suite, afin de pouvoir comparer avec un modèle OvR, nous avons binarisé les issues 
@@ -175,7 +175,7 @@ Par la suite, nous avons procédé à un classement des bookmakers
 entre eux à l'aide d'un Critical Difference diagramme\footnote{https://mirkobunse.github.io/CriticalDifferenceDiagrams.jl/dev/}. 
 Cette méthode se 
 base sur un test de Friedman afin de déterminer s'il existe ou non des différences 
-significative entre les éléments comparer. Une fois ce test réalisé, l'analyse peut 
+significatives entre les éléments comparés. Une fois ce test réalisé, l'analyse peut 
 avoir lieu. 
 
 \begin{figure}[H]

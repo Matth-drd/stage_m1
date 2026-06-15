@@ -7,7 +7,7 @@ comparer et d'analyser les résultats obtenus.
 \noindent Nous débuterons par les métriques évaluant les modèles de Poisson.
 \input{metrique/metrique_stat.tex}
 
-\section{Score F1}
+\subsection{Score F1}
 \label{sec:f1}
 Le score F1 est un compromis entre la précision
 $precision = \frac{TP}{TP + FP}$ et le rappel
@@ -19,22 +19,23 @@ F1 = 2 \times \frac{Precision \times Recall}{Precision + Recall}
 \]
 
 \noindent Il correspond à la moyenne harmonique de la précision et du rappel.  
-Le rappel se concentre sur les faux négatifs, tandis que la précision se concentre sur les faux positifs.
+Le rappel se concentre sur les faux négatifs, tandis que la précision se 
+concentre sur les faux positifs.
 Ainsi, le score F1 permet de combiner ces deux métriques en une seule, 
 afin d'évaluer les performances globales du modèle, notamment dans le cas de 
 classes déséquilibrées.
 Dans notre projet, il est évalué au seuil de confiance optimal 
-identifié pour chaque modèle, afin de refléter les meilleures performances retenue.
+identifié pour chaque modèle, afin de refléter les meilleures performances retenues.
 Le seuil de confiance optimal est trouvé en maximisant le profit basé sur le ROI.
 
-\section{Return on Invest (ROI)}
+\subsection{Return on Invest (ROI)}
 \label{sec:roi}
 Une possibilité pour évaluer un modèle de paris peut être le ROI. 
 Le principe est simple, $ROI = \frac{gain - mise}{mise} \times 100$. 
 Le ROI permet d'évaluer la rentabilité d'un modèle, cependant, il ne permet pas de prendre 
 en compte le nombre de paris par exemple.
 
-\section{Brier-Score}
+\subsection{Brier-Score}
 \label{sec:BS}
 Nous avons également utilisé la notion de Brier score afin de comparer nos modèles. 
 La formule la plus commune de ce score est : $$BS=\frac{1}{N}\sum_{i=1}^{N}(p_i - o_i)^2$$
@@ -43,7 +44,7 @@ et ${o_i}\in \left\{0,1\right\}$ l'observation et $N$ représente le nombre de m
 de l'échantillon. Il permet donc de quantifier l'écart entre la Prédiction et 
 la réalisation.
 
-\section{Log-loss}
+\subsection{Log-loss}
 \label{sec:log-loss}
 
 La Log-loss est la fonction de coût utilisée pour évaluer la précision des 

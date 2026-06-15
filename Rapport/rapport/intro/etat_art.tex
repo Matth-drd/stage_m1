@@ -5,8 +5,8 @@
 % La prédiction de l'issue de matchs de football est un problème traité par un grand nombre de personnes, 
 % tant par des passionnés de foot, que des parieurs aguerris mais aussi 
 % par des statisticiens. 
-L'un des premiers résultats majeurs dans ce domaine est initié par 
-M. J. Maher \cite{maher}, lorsqu'il expose le fait que les buts marqués lors de rencontres 
+L'un des premiers résultats majeurs dans ce domaine a été établi par 
+M. J. Maher \cite{maher}, lorsqu'il expose le fait que le nombre de buts marqués lors de rencontres 
 de football peut être simulé par une loi Poisson prenant comme paramètres la force 
 d'attaque et de défense des équipes.
 
@@ -17,7 +17,7 @@ du football en supposant que les buts marqués suivent des lois de Poisson
 indépendantes. Mark Dixon et Stuart Coles \cite{dixon} ont prolongé cette approche 
 en introduisant deux améliorations majeures, la correction de la dépendance via l'ajout 
 d'un facteur multiplicatif $\tau$ pour corriger la sous-représentation des faibles 
-scores ($0-0, 1-0, 0-1, 1-1$) dans les modèles de Poisson standards, et une 
+scores ($0-0, 1-0, 0-1, 1-1$) dans les modèles de Poisson standards. De plus, ils ajoutent une 
 pondération temporelle par l'intégration d'une fonction de pondération décroissante 
 $\phi(t-t_k)$ permettant de donner plus d'importance aux résultats récents et 
 de suivre la dynamique de performance des équipes.
@@ -89,9 +89,10 @@ Les paramètres $\hat{\gamma}_i$ et $\hat{\delta}_j$ sont estimés de façon ana
 \subsubsection{Approche statistique de Dixon et Coles}
 Dans la continuité du modèle de Maher, Dixon et Coles ont ajouté un coefficient $\gamma$ 
 représentant l'avantage de jouer à domicile, ainsi qu'une fonction $\tau$ pour gérer 
-les petits scores $x$-$y$ avec $x,y \in \left\{ 0,1 \right\} $. En effet, l'hypothèse d'indépendance 
-des buts initiée par Maher est relaxée par Dixon et Coles pour les faibles scores mais conservée pour 
-les scores plus importants. Ils ajoutent également une fonction $\phi$ pondérant les matchs récent.
+les petits scores $x$-$y$ avec $x,y \in \left\{ 0,1 \right\} $. En effet, l'hypothèse 
+d'indépendance des buts initiée par Maher est relaxée par Dixon et Coles pour les 
+faibles scores mais conservée pour les scores plus importants. Ils ajoutent également 
+une fonction $\phi$ pondérant les matchs récents.
 
 
 
@@ -102,7 +103,7 @@ les scores plus importants. Ils ajoutent également une fonction $\phi$ pondéra
 \subsection{Différentes modélisations}
 
 Egidi et Torelli \cite{egidi} enrichissent l'analyse en comparant, via une 
-approche bayésienne, deux types de modèles. Dans un premier temps Result-based par 
+approche bayésienne, deux types de modèles. Dans un premier temps "Result-based" par 
 une modélisation multinomiale de l'issue (1, X, 2) utilisant des modèles probit
 \footnote{Le modèle probit utilise la fonction de répartition de la loi normale 
 centrée réduite pour modéliser la probabilité d'un événement binaire ou multinomial.} 
@@ -111,7 +112,7 @@ en valeurs réelles via la fonction log-odds $ln(p/(1-p)$), facilitant ainsi les
 en inférence bayésienne.}. 
 Cette approche est particulièrement pertinente lors des phases finales de tournois où 
 les écarts de niveau sont faibles, bien qu'elle ignore l'ampleur des scores 
-(ex: une victoire 5-0 est traitée comme un 1-0). Puis, Goal-based, ici la modélisation 
+(ex: une victoire 5-0 est traitée comme un 1-0). Puis, "Goal-based", ici la modélisation 
 est basée sur une loi de Poisson bivariée permettant d'inclure un paramètre de 
 dépendance ($\lambda_3$) entre les buts. Elle s'avère plus efficace lorsque 
 les écarts de niveau sont élevés.
@@ -128,8 +129,7 @@ d'apprentissage supervisé (KNN, SVM, Random Forest, Naive Bayes) et des réseau
 de neurones artificiels (ANN) à quatre couches. Contrairement aux approches 
 précédentes, ces modèles ne nécessitent aucune hypothèse a priori sur la 
 distribution des buts. 
-Leur méthodologie repose sur un nettoyage rigoureux des données (réduction de 
-47 à 31 variables) et l'utilisation de la \textit{prediction accuracy} et du 
+Leur méthodologie repose sur un nettoyage rigoureux des données et l'utilisation de la \textit{prediction accuracy} et du 
 retour sur investissement (ROI) comme métriques de performance. Bien que l'ANN 
 soit identifié comme le modèle le plus performant (avec un ROI de 26\% sur un 
 échantillon test), ces modèles souffrent d'un manque d'explicabilité et d'une 

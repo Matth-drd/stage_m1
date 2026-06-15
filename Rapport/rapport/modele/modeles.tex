@@ -14,6 +14,7 @@ la log-loss et le ROI, que nous détaillerons dans le chapitre \ref{chap:métriq
 
 
 \section{Modèles statistiques}
+\label{sec:stat_poisson}
 \subsection{Poisson de Maher}
 \subsubsection{Adaptation en rolling strict et Lissage Bayésien}
 
@@ -132,9 +133,9 @@ $$ \partial_\rho \log L =
 + \sum_{k \in \{1-1\}} \frac{-1}{1 - \rho^*}$$
 
 Une modification supplémentaire est apportée par Dixon-Coles afin de gérer l'importance des matchs 
-celon leurs ancienneté. Pour cela, ils ajoutent une fonction $\phi$ définie par : 
+selon leur ancienneté. Pour cela, ils ajoutent une fonction $\phi$ définie par : 
 $$\phi_k = e^{-\xi \dot t_k}$$ 
-cette fonction permet de donner plus d'importance aux matches récents. 
+cette fonction permet de donner plus d'importance aux matchs récents. 
 
 \subsubsection{Prédiction de l'issue du match}
 
@@ -144,11 +145,13 @@ En effet, la distribution de Poisson décrit l'évolution du nombre de buts. Cep
 learning utilisés, eux, prédisent l'issue des matchs, nous devons donc effectuer cette transition afin de pouvoir 
 comparer l'approche ML avec l'approche statistique. 
 
-Pour cela, selon Maher, les buts marqués par l'équipe A et par l'équipe B sont indépendants. Par suite, la probabilité 
-$P(X=x, Y=y) = P(X=x) \times P(Y=y)$ ce qui nous permet de construire la matrice $M$ telle que 
-$M_{i,j} = P(X=i, Y=j)$ figure \ref{fig:matricMaher}. Ainsi, la probabilité que l'équipe A gagne correspond à la probabilité qu'elle 
-marque plus de buts que l'équipe B. Autrement dit, la victoire de l'équipe à domicile correspond aux coefficients de 
-la matrice tel que $i>j$. Le match nul correspond à la diagonale, et la victoire extérieur correspond à la matrice triangulaire 
+Pour cela, selon Maher, les buts marqués par l'équipe A et par l'équipe B sont indépendants. 
+Par suite, la probabilité $P(X=x, Y=y) = P(X=x) \times P(Y=y)$ ce qui nous permet de 
+construire la matrice $M$ telle que $M_{i,j} = P(X=i, Y=j)$ figure \ref{fig:matricMaher}. 
+Ainsi, la probabilité que l'équipe A gagne correspond à la probabilité qu'elle 
+marque plus de buts que l'équipe B. Autrement dit, la victoire de l'équipe à domicile 
+correspond aux coefficients de la matrice tel que $i>j$. Le match nul correspond à 
+la diagonale, et la victoire extérieure correspond à la matrice triangulaire 
 supérieure $i<j$ figure \ref{fig:matrixMaherSeparation}.
 
 \begin{figure}[H]
@@ -185,12 +188,13 @@ supérieure $i<j$ figure \ref{fig:matrixMaherSeparation}.
     \label{fig:matrixDCSeparation}
 \end{figure}
 
-Dans le cas de Dixon \& Coles, l'hypothèse d'indépendance n'est pas tout a fait la même dans le cas des score faibles. 
+Dans le cas de Dixon \& Coles, l'hypothèse d'indépendance n'est pas tout à fait la même 
+dans le cas des scores faibles. 
 Pour traiter ce cas, ils ajoutent un facteur $\tau$, la matrice $M$ devient donc : 
 $M_{i,j}=\tau(i,j)\times P(X=i)\times P(Y=j)$.
 
 \section{Modèles de machine learning}
-\label{sec:modeles ML}
+\label{sec:ML}
 
 \subsection{Baseline}
 
@@ -255,7 +259,7 @@ au même titre que les autres algorithmes.
 
 \subsection{LightGBM}
 
-Nous avons également implméenté un LightGMB \cite{chenlgbm}. 
+Nous avons également implémenté un LightGBM \cite{chenlgbm}. 
 LightGBM (Light Gradient Boosting Machine) est une implémentation 
 optimisée du Gradient Boosting développée par Microsoft. Sa particularité réside dans une 
 croissance des arbres par feuille (\textit{leaf-wise} \ref{fig:leaf_tree}) plutôt que par niveau 

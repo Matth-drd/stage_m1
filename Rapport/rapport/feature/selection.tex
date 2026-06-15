@@ -168,15 +168,16 @@ des deux approches de sélection.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \section{Visualisation}
+\label{sec:visu}
 Suite à cette étape de sélections, nous avons choisi de conserver les descripteurs communs 
-aux trois méthode RFECV, ANOVA et mutual information, ainsi, 20 descripteurs sont 
+aux trois méthodes RFECV, ANOVA et mutual information, ainsi 20 descripteurs sont 
 conservés pour les modèles de classification: 
 
 \noindent ['FT\_Adef', 'FT\_Aforme', 'FT\_Elo\_A', 'FT\_Elo\_H', 'FT\_Elo\_dif', 'FT\_Elo\_ratio', 'FT\_Hforme', 'FT\_forme\_diff',
 'FT\_forme\_ratio', 'FT\_prec\_diff', 'FT\_prec\_ratio', 'HT\_Elo\_A', 'HT\_Elo\_H', 'HT\_Elo\_dif', 'HT\_Elo\_ratio',
 'HT\_Hforme', 'HT\_def\_ratio', 'HT\_forme\_diff', 'HT\_forme\_ratio', 'Rank\_diff'].
 \newline 
-Une liste de 6 descripteurs sera sélectionnés pour les réseaux de neurones : 
+Une liste de 6 descripteurs sera sélectionnée pour les réseaux de neurones : 
 
 \noindent ['FT\_Aprec\_weight', 'FT\_avgY\_diff', 'HT\_Elo\_A', 'HT\_Elo\_dif', 'HT\_Hdef', 'WinStreak\_diff'].
 
@@ -220,7 +221,7 @@ projeté en utilisant les descripteurs retenues grâce au MLP utilisant la méth
     \begin{minipage}{0.48\textwidth}
         \centering
         \includegraphics[width=\textwidth]{../../../plot/umap_3d_ft_co.png}
-        \caption{UMAP 2D : 20 features communes.}
+        \caption{UMAP 3D : 20 features communes.}
         \label{fig:umap_3d_20}
     \end{minipage}
     \hfill 
@@ -228,11 +229,11 @@ projeté en utilisant les descripteurs retenues grâce au MLP utilisant la méth
     \begin{minipage}{0.48\textwidth}
         \centering
         \includegraphics[width=\textwidth]{../../../plot/umap_3d_ft_ecd.png}
-        \caption{UMAP 2D : 6 features (modèle ECD).}
+        \caption{UMAP 3D : 6 features (modèle ECD).}
         \label{fig:umap_3d_6}
     \end{minipage}
 \end{figure}
-Ici, nous avons projeté en 3 dimensions afin de pouvoir mieux explorer la répartition et 
+Sur les figures \ref{fig:umap_3d_20} et \ref{fig:umap_3d_6} nous avons projeté en 3 dimensions afin de pouvoir mieux explorer la répartition et 
 la séparabilité de nos données.
 
 
@@ -267,7 +268,7 @@ la séparabilité de nos données.
     \label{fig:Boxplot_20}
 \end{figure}
 
-Nous avons également comparé la séparabilité des classes en utilisant la cible 'Hvs' 
+Nous avons également comparé la séparabilité des classes en utilisant la cible "Hvs" 
 ( Home versus Rest ). 
 
 \begin{figure}[H] 
@@ -282,7 +283,8 @@ Nous avons également comparé la séparabilité des classes en utilisant la cib
 % les features sélectionnés.
 
 \noindent Suite à cette étape de visualisation, nous pouvons constater que les données ne sont 
-visiblement pas séparables. Cependant, un certain nombre de matchs restent relativement isolés
+visiblement pas séparables. Cependant, un certain nombre de matchs restent 
+relativement isolés.
 
 
 

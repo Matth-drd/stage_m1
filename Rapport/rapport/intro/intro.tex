@@ -1,24 +1,62 @@
 \chapter{Introduction et revue de littérature}
 
-Le sport, et principalement le football, fait partie des sujets les plus communs dans le monde, 
-rassemblant les gens autour de rencontres sportives, et de compétitions. Pour certain c'est un 
-divertissement, pour d'autres une source de paris. La prédiction de l'issue de matchs de football 
-est un problème traité par un grand nombre de personnes, tant par des passionnés de foot, 
-que des parieurs aguerris mais aussi par des statisticiens. Cette prédiction peut être due au 
-hasard mais certains veulent pouvoir prédire l'issue des matchs. Les premiers travaux réalisés sur 
-ce sujet portent sur une approche statistique se basant principalement sur le nombre de buts de 
-chaque équipe. L'essor des intelligences artificiels et des algorithmes de Machine Learning (ML) 
-ouvrent de nouvelles portes pour la recherche dans ce milieu. \\
+% Le sport, et principalement le football, fait partie des sujets les plus communs dans le monde, 
+% rassemblant les gens autour de rencontres sportives, et de compétitions. Pour certain c'est un 
+% divertissement, pour d'autres une source de paris. La prédiction de l'issue de matchs de football 
+% est un problème traité par un grand nombre de personnes, tant par des passionnés de foot, 
+% que des parieurs aguerris mais aussi par des statisticiens. Cette prédiction peut être due au 
+% hasard mais certains veulent pouvoir prédire l'issue des matchs. Les premiers travaux réalisés sur 
+% ce sujet portent sur une approche statistique se basant principalement sur le nombre de buts de 
+% chaque équipe. L'essor des intelligences artificiels et des algorithmes de Machine Learning (ML) 
+% ouvrent de nouvelles portes pour la recherche dans ce milieu. \\
+
+Le football est l'un des sports les plus populaires au monde, fédérant des 
+millions de passionnés et générant un intérêt économique majeur, notamment à 
+travers le marché des paris sportifs. Dans ce contexte, la prédiction du 
+résultat des matchs est devenue un défi captivant, partagé tant par les amateurs 
+que par les statisticiens. 
+Si l'intuition a longtemps dominé, la modélisation 
+scientifique offre aujourd'hui des outils rigoureux pour anticiper les scores. 
+Les premiers travaux académiques dans ce domaine reposaient sur des approches 
+statistiques classiques, modélisant principalement le nombre de buts. 
+Cependant, l'essor récent de l'intelligence artificielle et des algorithmes de 
+Machine Learning (ML) ouvre de nouvelles perspectives pour capturer la complexité et 
+la dynamique du sport de haut niveau.\\
 
 \input{intro/etat_art.tex}
 
-Durant ce stage, nous avons cherché à comparer l'approche statistique avec l'approche ML. 
-Pour cela, notre travail est organisé comme suit, 
-récupération des données, nettoyage, calculs des descripteurs en veillant  à l'absence de 
-\textit{data leakage}\footnote{En statistiques et en apprentissage automatique, le 
+\subsubsection{Objectif}
+
+Durant ce stage, nous avons cherché à développer, comparer et analyser plusieurs 
+approches statistiques et algorithmiques afin de prédire l'issue de rencontres 
+de football à partir de données réelles de championnats européens. 
+Pour cela, notre travail est organisé en quatre chapitres. 
+\\
+ Récupération et ingénierie des données \ref{chap:data} : nettoyage, calcul des descripteurs 
+en veillant  à l'absence de \textit{data leakage}\footnote{En statistiques et en apprentissage automatique, le 
 \textit{data leakage} désigne l'utilisation lors de l'entraînement d'un modèle 
-d'informations qui ne seraient pas disponibles au moment de la prédiction.}, puis 
-implémentation des modèles.
+d'informations qui ne seraient pas disponibles au moment de la prédiction.}.
+\\
+Modélisation statistique traditionnelle 
+des modèles de Poisson \ref{sec:stat_poisson} . Nous implémenterons des modèles 
+probabilistes de comptage, du modèle de base de Poisson au modèle corrigé de 
+Dixon et Coles.
+\\
+Apprentissage supervisé moderne \ref{sec:ML}. Nous mobiliserons des algorithmes de Machine 
+Learning (forêts aléatoires, XGBoost, LightGBM, réseaux de neurones) pour évaluer 
+leur capacité à surpasser les approches classiques.
+\\
+Enfin, évaluation et validation en utilisant divers métriques \ref{chap:métriques}. Une comparaison méthodologique 
+sera menée à l'aide d'une validation chronologique par fenêtres glissantes et 
+de métriques adaptées (Log-Loss, Brier Score).
+
+
+
+
+
+
+
+
 
 % Ce stage s'est déroulé à l'Institut de Mathématiques Appliquées d'Angers, encadré 
 % par \textbf{M. Essoham Ali}. 
