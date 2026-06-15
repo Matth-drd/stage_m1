@@ -6,7 +6,6 @@ from scipy.optimize import minimize
 from scipy.stats import poisson, chi2_contingency
 from sklearn.metrics import brier_score_loss, log_loss, mean_squared_error, mean_absolute_error, mean_poisson_deviance
 import matplotlib.pyplot as plt
-import seaborn as sns
 from tqdm import tqdm
 
 sys.path.append(os.path.abspath('code'))
@@ -72,6 +71,8 @@ for idx in tqdm(range(len(df)), desc="Calcul des Lambdas"):
     else:
         moy_ligue_dom = total_buts_dom / total_matchs_ligue
         moy_ligue_ext = total_buts_ext / total_matchs_ligue
+    moy_ligue_dom = max(moy_ligue_dom, 0.1)  # éviter division par 0
+    moy_ligue_ext = max(moy_ligue_ext, 0.1)
 
     alpha_h = ((goals_marques_dom[h] + K * moy_ligue_dom) / (matches_joues_dom[h] + K)) / moy_ligue_dom
     delta_h = ((goals_encaisses_dom[h] + K * moy_ligue_ext) / (matches_joues_dom[h] + K)) / moy_ligue_ext
@@ -189,7 +190,7 @@ probs_dixon = probs_dixon / probs_dixon.sum(axis=1, keepdims=True)  # correctnio
 
 print(f"Log-Loss  | Maher: {log_loss(y_true_1X2, probs_maher):.4f} | Dixon: {log_loss(y_true_1X2, probs_dixon):.4f}")
 print(
-    f"Brier (H) | Maher: {brier_score_loss(y_true_dom, probs_maher[:, 0]):.4f} | Dixon: {brier_score_loss(y_true_dom, probs_dixon[:, 0]):.4f}")
+    f"Brier  | Maher: {brier_score_loss(y_true_dom, probs_maher[:, 0]):.4f} | Dixon: {brier_score_loss(y_true_dom, probs_dixon[:, 0]):.4f}")
 
 # %% ÉVALUATION DES PRÉDICTIONS DE BUTS
 buts_reels_dom = df_fiable["FTHG"].values
@@ -308,10 +309,11 @@ df_fiable["p_2_DC_Temp"] = p2_dct
 
 probs_dc_temp = df_fiable[["p_1_DC_Temp", "p_X_DC_Temp", "p_2_DC_Temp"]].values
 
+print(f"Log-Loss  | Maher: {log_loss(y_true_1X2, probs_maher):.4f} | Dixon: {log_loss(y_true_1X2, probs_dixon):.4f} "
+      f"| Dixon Temp: {log_loss(y_true_1X2, probs_dc_temp):.4f}")
 print(
-    f"Log-Loss  | Maher: {log_loss(y_true_1X2, probs_maher):.4f} | Dixon: {log_loss(y_true_1X2, probs_dixon):.4f} | Dixon Temp: {log_loss(y_true_1X2, probs_dc_temp):.4f}")
-print(
-    f"Brier (H) | Maher: {brier_score_loss(y_true_dom, probs_maher[:, 0]):.4f} | Dixon: {brier_score_loss(y_true_dom, probs_dixon[:, 0]):.4f} | Dixon Temp: {brier_score_loss(y_true_dom, probs_dc_temp[:, 0]):.4f}")
+    f"Brier (H) | Maher: {brier_score_loss(y_true_dom, probs_maher[:, 0]):.4f} | Dixon: {brier_score_loss(y_true_dom, probs_dixon[:, 0]):.4f} "
+    f"| Dixon Temp: {brier_score_loss(y_true_dom, probs_dc_temp[:, 0]):.4f}")
 
 res_DCT = simuler_performance_financiere(y_true_dom, df_fiable["p_1_DC_Temp"].values, cotes_home, "DIXON-COLES TEMP")
 print(
@@ -358,6 +360,5 @@ for (data, color, ls, lw, label) in series:
     plt.ylim(min(data) - margin, max(data) + margin)
 
     plt.show()
-
 
 # %%
