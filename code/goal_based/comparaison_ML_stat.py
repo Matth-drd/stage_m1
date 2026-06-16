@@ -9,7 +9,7 @@ import scikit_posthocs as sp
 from scipy.stats import poisson
 import scipy.stats as stats
 from scipy.optimize import minimize
-from sklearn.metrics import (log_loss, precision_score, f1_score, accuracy_score, brier_score_loss)
+from sklearn.metrics import (log_loss, precision_score, recall_score, f1_score, accuracy_score, brier_score_loss)
 
 sys.path.append(os.path.abspath('code'))
 import config as conf
@@ -19,10 +19,13 @@ import config as conf
 # =========================================================================
 DATA_PATH = conf.path_clean_cell
 MODELS_DIR = "models"
+# split 80/20
 SPLIT_RATIO = 0.8
+# cible binaire
 TARGET_BIN = "Hvs"
 MISE = 10
 MAX_GOALS = 10
+# lissage bayesien
 K_SMOOTHING = 5
 
 SEUIL_SECURISE = 0.65
@@ -40,11 +43,11 @@ MODELS_CONFIG = {
     "LightGBM (Base)": ("LightGBM_Base", 0.73),
     "LightGBM (Optimisé)": ("LightGBM_Optimisé", 0.68),
     "MLP (Base)": ("MLP_Base", 0.62),
-    "MLP (Optimisé)": ("MLP_Optimisé", 0.68),
+    "MLP (Optimisé)": ("MLP_Optimisé", 0.68)
 }
 
-# %%=========================================================================
-# CHARGEMENT DES DONNÉES
+# %%
+# data
 
 df = pd.read_csv(DATA_PATH)
 df['Date'] = pd.to_datetime(df['Date'])
@@ -56,13 +59,16 @@ df_test = df.iloc[split_idx:].copy()
 y_test = df_test[TARGET_BIN].values
 cotes_test = df_test.get("BWH", df_test.get("AvgH", 2.0)).values
 
+# split test ML et ann
 X_test_brut_commune = df_test[conf.ft_commune]
 X_test_brut_nn = df_test[conf.ft_nn]
 
 
-# %%CHARGEMENT DES MODÈLES
+# %%
+# CHARGEMENT DES MODÈLES
 
 def load_models(models_dir=MODELS_DIR):
+    """charge les modèles ML entrainé dans modele_et_commparaison.py"""
     trained = {}
     for nom, cfg in MODELS_CONFIG.items():
         nom_fichier, seuil_opt = cfg
@@ -81,13 +87,15 @@ def load_models(models_dir=MODELS_DIR):
 modeles_ml = load_models(MODELS_DIR)
 
 
-def get_X_test(nom_affiche):
-    if nom_affiche.startswith("MLP"):
+def get_X_test(model):
+    """pour prendre le bon jeu de test. Le scaler n'est pas le même pour le mlp et les autres"""
+    if model.startswith("MLP"):
         return X_test_brut_nn
     return X_test_brut_commune
 
 
-# %%MODÈLES STATISTIQUES : DIXON-COLES (BASE & TEMPOREL)
+# %%
+# MODÈLES STATISTIQUES : DIXON-COLES (BASE & TEMPOREL)
 
 def build_dixon_coles_lambdas(df_full, k=K_SMOOTHING):
     toutes_equipes = set(df_full["HomeTeam"].unique()) | set(df_full["AwayTeam"].unique())
@@ -99,6 +107,7 @@ def build_dixon_coles_lambdas(df_full, k=K_SMOOTHING):
     m_joues_ext = {t: 0 for t in toutes_equipes}
     tot_b_dom, tot_b_ext, tot_m = 0, 0, 0
 
+    # calcul des coef mu et nu pour Poisson
     mu_all, nu_all = [], []
     home_teams = df_full["HomeTeam"].values
     away_teams = df_full["AwayTeam"].values
@@ -134,6 +143,7 @@ def build_dixon_coles_lambdas(df_full, k=K_SMOOTHING):
 
 
 def tau(x, y, mu, nu, rho):
+    """fonction de Dixon-Coles pour gerer petit score"""
     if x == 0 and y == 0: return 1 - mu * nu * rho
     if x == 0 and y == 1: return 1 + mu * rho
     if x == 1 and y == 0: return 1 + nu * rho
@@ -142,10 +152,13 @@ def tau(x, y, mu, nu, rho):
 
 
 def neg_log_L_base(params, mu, nu, x, y):
+    """log vraisemblance du papier de Dixon-Coles"""
     rho = params[0]
-    if abs(rho) > 1: return 1e6
+    if abs(rho) > 1:
+        return 1e6
     t_factors = np.array([tau(xi, yi, mi, ni, rho) for xi, yi, mi, ni in zip(x, y, mu, nu)])
-    if np.any(t_factors <= 0): return 1e6
+    if np.any(t_factors <= 0):
+        return 1e6
     return -(np.log(poisson.pmf(x, mu)) + np.log(poisson.pmf(y, nu)) + np.log(t_factors)).sum()
 
 
@@ -317,10 +330,12 @@ for nom, (probas, seuil, est_ml) in specs.items():
         "Accuracy (0.5)": round(accuracy_score(y_test, y_pred_050), 3),
         "F1 (0.5)": round(f1_score(y_test, y_pred_050, zero_division=0), 3),
         "Précision (0.5)": round(precision_score(y_test, y_pred_050, zero_division=0), 3),
+        "Recall": round(recall_score(y_test, y_pred_050, zero_division=0), 3),
         "||": "||",
         "Accuracy (Opti)": round(accuracy_score(y_test, y_pred_opti), 3),
         "F1 (Opti)": round(f1_score(y_test, y_pred_opti, zero_division=0), 3),
         "Précision (Opti)": round(precision_score(y_test, y_pred_opti, zero_division=0), 3),
+        "Recall (Opti)": round(recall_score(y_test, y_pred_opti, zero_division=0), 3),
     })
 
     if nom == "Baseline (Toujours 1)":
