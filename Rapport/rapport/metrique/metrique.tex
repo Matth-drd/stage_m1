@@ -2,10 +2,14 @@
 \label{chap:métriques}
 De nombreuses métriques existent afin d'évaluer les modèles de ML, 
 dans ce chapitre, nous détaillons les métriques utilisées afin de 
-comparer et d'analyser les résultats obtenus.
+comparer et analyser les résultats obtenus.
 
 \noindent Nous débuterons par les métriques évaluant les modèles de Poisson.
 \input{metrique/metrique_stat.tex}
+
+\vspace*{1cm}
+\noindent Dans la suite, $N$ désigne le nombre de matchs de l'échantillon, $o_i \in \{0, 1\}$ 
+l'observation réelle et $p_i \in [0, 1]$ la probabilité prédite par le modèle.
 
 \subsection{Score F1}
 \label{sec:f1}
@@ -18,10 +22,11 @@ Il est défini par :
 F1 = 2 \times \frac{Precision \times Recall}{Precision + Recall}
 \]
 
-\noindent Il correspond à la moyenne harmonique de la précision et du rappel.  
-Le rappel se concentre sur les faux négatifs, tandis que la précision se 
-concentre sur les faux positifs.
-Ainsi, le score F1 permet de combiner ces deux métriques en une seule, 
+\noindent Il correspond à la moyenne harmonique de la précision et du rappel (Recall).  
+Le rappel se concentre sur les faux négatifs, c'est-à-dire les vrais positifs que le modèles 
+aurait raté lors de la prédiction. Tandis que la précision se concentre sur 
+les faux positifs, c'est-à-dire la proportion d'erreur lors de la prédiction. 
+Ainsi, le score F1 permet de combiner ces deux métriques en une, 
 afin d'évaluer les performances globales du modèle, notamment dans le cas de 
 classes déséquilibrées.
 Dans notre projet, il est évalué au seuil de confiance optimal 
@@ -30,33 +35,40 @@ Le seuil de confiance optimal est trouvé en maximisant le profit basé sur le R
 
 \subsection{Return on Invest (ROI)}
 \label{sec:roi}
-Une possibilité pour évaluer un modèle de paris peut être le ROI. 
-Le principe est simple, $ROI = \frac{gain - mise}{mise} \times 100$. 
-Le ROI permet d'évaluer la rentabilité d'un modèle, cependant, il ne permet pas de prendre 
-en compte le nombre de paris par exemple.
+Le ROI (\textit{Return on Investment}) est une métrique permettant d'évaluer la 
+rentabilité d'un modèle de paris, défini par :
+\[
+ROI = \frac{gain - mise}{mise} \times 100
+\]
+Bien qu'il offre une mesure intuitive de la rentabilité, il ne tient pas compte 
+du volume de paris effectués.
 
 \subsection{Brier-Score}
 \label{sec:BS}
-Nous avons également utilisé la notion de Brier score afin de comparer nos modèles. 
-La formule la plus commune de ce score est : $$BS=\frac{1}{N}\sum_{i=1}^{N}(p_i - o_i)^2$$
-où ${p_i}\in \left[0,1\right]$ est la probabilité de réalisation de l'événement, 
-et ${o_i}\in \left\{0,1\right\}$ l'observation et $N$ représente le nombre de matchs 
-de l'échantillon. Il permet donc de quantifier l'écart entre la Prédiction et 
-la réalisation.
+Nous avons également utilisé le Brier Score afin de comparer les performances 
+de nos modèles. Il s'agit d'une approche similaire à l'EQM, à la différence près 
+qu'il s'applique aux probabilités prédites par un modèle de classification. Il mesure 
+ainsi l'écart quadratique moyen entre la probabilité prédite et l'observation réelle, 
+permettant d'évaluer la qualité des prédictions probabilistes du modèle. La formule 
+la plus commune de ce score est :
+\[
+BS = \frac{1}{N} \sum_{i=1}^{N} (p_i - o_i)^2
+\]
+Plus ce score est faible, meilleure est la calibration du modèle.
+
 
 \subsection{Log-loss}
 \label{sec:log-loss}
 
-La Log-loss est la fonction de coût utilisée pour évaluer la précision des 
-probabilités prédites par nos classifieurs. Elle permet de quantifier la différence entre 
-la véritable issue et la prédiction. Plus ce score est faible, plus le modèle est bon. 
-Mathématiquement, pour un problème binaire, elle est définie par :
-$$LogLoss = - \frac{1}{N} \sum_{i=1}^{N} \left[ o_i \ln(p_i) + (1 - o_i) 
-\ln(1 - p_i) \right]$$
-où $N$ désigne le nombre de matchs, $o_i \in \{0, 1\}$ l'observation 
-réelle, et $p_i \in ]0, 1[$ la probabilité prédite par le modèle pour 
-la victoire à domicile. 
+La Log-loss est une fonction de coût évaluant la précision des probabilités prédites 
+par nos classifieurs. Contrairement au Brier Score, elle pénalise plus sévèrement 
+les prédictions confiantes mais erronées. Pour un problème binaire, 
+elle est définie par :
+\[
+LogLoss = - \frac{1}{N} \sum_{i=1}^{N} \left[ o_i \ln(p_i) + (1 - o_i) \ln(1 - p_i) \right]
+\]
+Comme pour le Brier Score, un score faible indique un modèle performant.
 
 
-% \section{ROC-AUC}
+
 

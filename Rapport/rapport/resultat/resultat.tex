@@ -34,8 +34,8 @@ Nous pouvons ainsi comparer les deux stratégies de mise et ainsi chercher la me
 La métrique utilisée 
 pour la comparaison est le ROI \ref{sec:roi} que nous avons implémenté de deux façons différentes. 
 Dans un premier temps avec une mise fixe à 10 €, dans un second temps afin d'essayer d'améliorer les 
-profits nous avons mis en place une mise dynamique. En fonction du seuil de confiance, ie de la 
-probabilité de la prédiction nous adaptons la mise. 
+profits nous avons mis en place une mise dynamique. En fonction du seuil de confiance, ie la 
+probabilité de la prédiction, nous adaptons la mise. 
 Par exemple pour une probabilité comprise entre 0.5 et 0.6 la mise sera de 10, entre 0.6 et 0.7 
 la mise est de 20 au dela de 0.7 la mise est de 30.
 
@@ -55,23 +55,34 @@ investissement de 5.71\% comparé à 4.9 en utilisant simplement le seuil optima
 ainsi voir que tous les modèles dépassent la Baseline, cependant, le meilleur score f1 reste celui 
 de la baseline. Cela s'explique par le fait que les modèles sont entraînés de sorte à optimiser le profit 
 et non la qualité prédictive. 
-
+Nous affichons également le score de "Recall" afin de mieux comprendre les résultats et les modèles.
 Le principal objectif visant à dépasser la prédiction naïve est atteint, en 
-effet sur les deux tableaux, nous observons bien que les modèles ML sont meilleurs.
-
-
+effet sur les deux tableaux, nous observons bien que les modèles ML sont meilleurs. Nous pouvons 
+également observer que le SVM (RBF) qui avait le meilleur ROI pocède un score-f1 très bas (0.038), mais 
+avec une précision de 73\%. Il présente un recall très faible, de 1.95\%, il ignore donc plus de 98\% 
+des bons paris pour ne pas prendre de risque. 
 
 \begin{figure}[H]
-    \includegraphics[width=\textwidth]{../../plot/maj/ml_stat_4/cdd.png}
-    \caption{Diagramme de différence critique}
-    \label{fig:cdd_ml_stat}
+        \centering
+        \includegraphics[width=\textwidth]{../../plot/maj/ml_stat_4/cdd.png}
+        \caption{Diagramme de différence critique (Log Loss)}
+        \label{fig:cdd_ml_stat_logloss}
+\end{figure}
+\begin{figure}[H]
+        \centering
+        \includegraphics[width=\textwidth]{../../plot/maj/ml_stat_4/cdd_eqm.png}
+        \caption{Diagramme de différence critique (Brier Score)}
+        \label{fig:cdd_ml_stat_brier}
 \end{figure}
 
-\noindent La figure \ref{fig:cdd_ml_stat} permet de classer les modèles entre eux 
-mais également par rapport au bookmaker Bwin. Les "crossbar" regroupent les modèles 
+\noindent La figure \ref{fig:cdd_ml_stat_logloss} permet de classer les modèles entre eux 
+mais également par rapport au bookmaker Bwin en utilisant la métrique de log loss. La figure \ref{fig:cdd_ml_stat_brier} 
+compare le Brier score. \\
+Les "crossbar" regroupent les modèles 
 ne présentant pas de différence significative, ainsi plusieurs groupes peuvent être 
 construits. Le plus important reste le groupe des équivalents du bookmaker, 
 [Bwin, SVM (opti), RandomForest (opti), LogistiqueRegression (opti), LightGBM (opti)].
+
 
 
 \input{conclusion/conclusion.tex}

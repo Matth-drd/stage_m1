@@ -16,7 +16,7 @@ Les travaux de Maher \cite{maher} ont posé les fondements de la modélisation
 du football en supposant que les buts marqués suivent des lois de Poisson 
 indépendantes. Mark Dixon et Stuart Coles \cite{dixon} ont prolongé cette approche 
 en introduisant deux améliorations majeures, la correction de la dépendance via l'ajout 
-d'un facteur multiplicatif $\tau$ pour corriger la sous-représentation des faibles 
+d'un facteur multiplicatif $\tau$ pour corriger la dépendance des faibles 
 scores ($0-0, 1-0, 0-1, 1-1$) dans les modèles de Poisson standards. De plus, ils ajoutent une 
 pondération temporelle par l'intégration d'une fonction de pondération décroissante 
 $\phi(t-t_k)$ permettant de donner plus d'importance aux résultats récents et 
@@ -30,7 +30,8 @@ contextuelles (blessures, cartons) et une sensibilité au choix du paramètre de
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{Modèle de Poisson -- Maher (1982)}
 
-L'utilisation de la loi de Poisson repose sur l'hypothèse que la possession du ballon se transforme 
+L'utilisation de la loi de Poisson repose sur l'hypothèse que la possession 
+du ballon se transforme 
 en but avec une probabilité $p$ faible, mais que le nombre d'occasions est élevé. 
 On notera que la loi binomiale négative constitue une alternative plus flexible, 
 capable de modéliser la surdispersion éventuelle des scores, mais nous retenons 
@@ -58,21 +59,21 @@ rééchelonnage simultané des deux facteurs.\\
 \left( -\alpha_i \beta_j + x_{ij} \log(\alpha_i \beta_j) - \log(x_{ij}!) \right)
 \]
 
-Les conditions du premier ordre donnent :
+\noindent Les conditions du premier ordre donnent :
 \[
 \frac{\partial \log L}{\partial \alpha_i} = \sum_{j \neq i} 
 \left( -\beta_j + \frac{x_{ij}}{\alpha_i} \right) = 0
 \]
 
 \noindent ainsi, les estimateurs du maximum de vraisemblance $\hat{\alpha}_i$ et $\hat{\beta}_j$ 
-vérifient le système implicite :
+vérifient le système :
 \[
 \hat{\alpha}_i = \frac{\sum_{j \neq i} x_{ij}}{\sum_{j \neq i} \hat{\beta}_j}
 \qquad \text{et} \qquad
 \hat{\beta}_j = \frac{\sum_{i \neq j} x_{ij}}{\sum_{i \neq j} \hat{\alpha}_i}
 \]
 
-Ce système peut être résolu par Newton-Raphson, ce qui conduit à l'approximation :
+\noindent Ce système peut être résolu par Newton-Raphson, ce qui conduit à l'approximation :
 \[
 \hat{\alpha}_i = \frac{\sum_{j \neq i} x_{ij}}{\sqrt{S_x}}, \qquad
 \hat{\beta}_j = \frac{\sum_{i \neq j} x_{ij}}{\sqrt{S_x}}, \qquad

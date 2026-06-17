@@ -5,12 +5,12 @@ Dans ce chapitre, nous détaillons l'implémentation et la stratégie d'optimisa
 modèles de Machine Learning retenus. L'objectif est de prédire l'issue binaire du match, formalisée 
 par la variable cible $y \in \{0, 1\}$, où $1$ désigne une victoire à domicile (\texttt{Hvs}) et 
 $0$ une non-victoire (match nul ou victoire extérieure). Plusieurs approches seront comparées, en 
-cohérence avec la littérature recensée : une approche statistique (régression logistique, modèle de 
-Poisson), des approches ensemblistes (Random Forest, Gradient Boosting) et, enfin, une approche 
+cohérence avec la littérature recensée : une approche statistique -- Régression logistique, modèle de 
+Poisson -- des approches ensemblistes -- Random Forest, Gradient Boosting -- enfin, une approche 
 par réseau de neurones, telle qu'explorée par Carloni \textit{et al.}\cite{carloni}.\\
 Les performances seront évaluées sur un ensemble de test chronologique (saisons les plus récentes) 
 afin d'éviter tout biais temporel, en utilisant des métriques adaptées : le F1-score, le Brier-Score, 
-la log-loss et le ROI, que nous détaillerons dans le chapitre \ref{chap:métriques}.
+la log-loss et le ROI, que nous avons détaillés dans le chapitre \ref{chap:métriques}.
 
 
 \section{Modèles statistiques}
@@ -159,7 +159,7 @@ supérieure $i<j$ figure \ref{fig:matrixMaherSeparation}.
     % --- Minipage Gauche (Matrice de Maher) ---
     \begin{minipage}[b]{0.48\textwidth}
         \centering
-        \includegraphics[width=\textwidth]{../../plot/exemple_matrix.png}
+        \includegraphics[width=\textwidth]{../../plot/matrix_maher.png}
         \caption{Matrice de Maher}
         \label{fig:matricMaher}
     \end{minipage}
@@ -167,7 +167,7 @@ supérieure $i<j$ figure \ref{fig:matrixMaherSeparation}.
     % --- Minipage Droite (Séparation en 3 matrices) ---
     \begin{minipage}[b]{0.48\textwidth}
         \centering
-        \includegraphics[width=\textwidth]{../../plot/ex_matrix_DC.png}
+        \includegraphics[width=\textwidth]{../../plot/matrix_DC.png}
         \caption{Matrice de Dixon \& Coles}
         \label{fig:matricDC}
     \end{minipage}
@@ -176,14 +176,14 @@ supérieure $i<j$ figure \ref{fig:matrixMaherSeparation}.
 \begin{figure}[H]
     \centering
     % --- Image du Haut ---
-    \includegraphics[width=0.85\textwidth]{../../plot/ex_matrix.png}
+    \includegraphics[width=0.85\textwidth]{../../plot/decomp_maher.png}
     \caption{Modèle de Maher : Séparation en 3 matrices distinctes}
     \label{fig:matrixMaherSeparation}
     
     \vspace{0.5cm} % Ajuste l'espace vertical entre les deux images si besoin
     
     % --- Image du Bas ---
-    \includegraphics[width=0.85\textwidth]{../../plot/ex_matrix_DC_2.png}
+    \includegraphics[width=0.85\textwidth]{../../plot/decomp_DC.png}
     \caption{Modèle de Dixon-Coles : Séparation en 3 matrices distinctes}
     \label{fig:matrixDCSeparation}
 \end{figure}

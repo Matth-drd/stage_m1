@@ -7,9 +7,9 @@ sont conservées, et quelles méthodes ont été utilisées pour les choisir. No
 \section{Sélection des variables}
 %%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%
-Nous avons appliqué trois méthodes complémentaires --- RFECV, ANOVA (\texttt{SelectKBest} avec $f\_classif$) 
+Nous avons appliqué trois méthodes complémentaires -- RFECV, ANOVA (\texttt{SelectKBest} avec $f\_classif$) 
 et Information Mutuelle (\texttt{SelectKBest}
-avec \texttt{mutual\_info\_classif}) --- sur la même cible binaire \texttt{Hvs}, afin de
+avec \texttt{mutual\_info\_classif}) -- sur la même cible binaire \texttt{Hvs}, afin de
 conserver uniquement les descripteurs sélectionnés par les trois méthodes simultanément.
 Cette intersection garantit que les features retenues sont pertinentes. L'ensemble
 des méthodes est appliqué après standardisation des données par \texttt{StandardScaler}.
@@ -20,17 +20,17 @@ La méthode RFECV (\textit{Recursive Feature Elimination with Cross-Validation})
 les descripteurs en se basant sur les
 performances d'un modèle sous-jacent, ici une Régression Logistique. Son principe est
 le suivant : à chaque itération, le descripteur le moins important (selon le coefficient du
-modèle) est supprimé, et le score $F_1$ est réévalué par validation croisée à 5 plis. Le
+modèle) est supprimé, et le score F1 est réévalué par validation croisée à 5 plis. Le
 nombre optimal de descripteurs est celui qui maximise ce score. Cette méthode tient donc
 compte des interactions entre variables.
 
-Appliquée à nos $61$ descripteurs initiaux avec \texttt{step=1} et \texttt{cv=5}, la
+Appliquée à nos $61$ descripteurs initiaux, la
 RFECV retient $34$ descripteurs. Parmi eux, on retrouve notamment les scores Elo
 (\texttt{FT\_Elo\_H}, \texttt{FT\_Elo\_A}, \texttt{FT\_Elo\_dif}), les indicateurs de
 forme (\texttt{FT\_Hforme}, \texttt{FT\_Aforme}), ainsi que plusieurs indicateurs de
 précision (\texttt{FT\_prec\_diff}, \texttt{FT\_prec\_ratio}).
 
-\subsection{ANOVA --- \texttt{SelectKBest} avec f\_classif}
+\subsection{ANOVA -- \texttt{SelectKBest} avec f\_classif}
 
 L'ANOVA (\textit{Analysis of Variance}) est une méthode qui mesure la
 dépendance linéaire entre chaque descripteur et la variable cible via la 
@@ -46,13 +46,13 @@ Pour chaque variable $X_k$, la statistique $F$ est définie par :
            {\sum_c \sum_{i \in c} (X_{k,i} - \bar{X}_{k,c})^2 / (N-C)}
 \end{equation}
 
-où $C$ est le nombre de classes, $n_c$ le nombre d'observations de la classe $c$, $N$ le
+\noindent où $C$ est le nombre de classes, $n_c$ le nombre d'observations de la classe $c$, $N$ le
 nombre total d'observations, $\bar{X}_{k,c}$ la moyenne du descripteur $k$ dans la classe
 $c$, et $\bar{X}_k$ la moyenne globale. Un score $F$ élevé indique que le descripteur
 discrimine bien les classes. Le paramètre $k$ est fixé au nombre de descripteurs retenu
 par la RFECV ($k = 34$) afin de rendre les méthodes comparables.
 
-L'ANOVA retient $34$ descripteurs, parmi lesquels les scores Elo, les indicateurs de
+L'ANOVA retient donc $34$ descripteurs, parmi lesquels les scores Elo, les indicateurs de
 forme, de force offensive et défensive (\texttt{FT\_att\_diff}, \texttt{FT\_def\_ratio}),
 ainsi que les variables de classement (\texttt{H\_Rank}, \texttt{A\_Rank},
 \texttt{Rank\_diff}) et les séries de victoires (\texttt{H\_WinStreak},
@@ -68,17 +68,17 @@ de relation linéaire. Elle est définie par :
     I(X_k ; Y) = \sum_{x,y} p(x,y) \log \frac{p(x,y)}{p(x)\,p(y)}
 \end{equation}
 
-$I(X_k ; Y) = 0$ si et seulement si $X_k$ et $Y$ sont indépendants ; plus la valeur est
+\noindent $I(X_k ; Y) = 0$ si et seulement si $X_k$ et $Y$ sont indépendants ; plus la valeur est
 élevée, plus le descripteur est informatif. Contrairement à l'ANOVA, l'IM capture les
 relations non linéaires entre descripteurs et cible, ce qui la rend complémentaire à
 l'approche précédente. Le paramètre $k$ est identique à celui de l'ANOVA ($k = 34$).
 
-L'information mutuelle retient $34$ descripteurs, avec une composition légèrement
-différente : on y retrouve les séries de défaites (\texttt{A\_WinStreak}), les indicateurs
+L'information mutuelle retient une composition légèrement différente : 
+on y retrouve les séries de défaites (\texttt{A\_WinStreak}), les indicateurs
 de précision pondérée (\texttt{FT\_Aprec\_weight}, \texttt{FT\_Hprec\_weight}) et les
 différences de fautes (\texttt{FT\_avgF\_diff}), qui ne figuraient pas dans la liste ANOVA.
 
-\subsection{Intersection et features retenues}
+\subsection{Intersection et descripteurs retenus}
 
 Les $20$ descripteurs communs aux trois méthodes sont retenus pour les modèles de
 classification :
@@ -103,7 +103,7 @@ méthodes sont croisées.
 
 
 % % =============================================================================
-\subsection{Sélection pour le réseau de neurones — méthode ECD}
+\subsection{Sélection pour le réseau de neurones -- méthode ECD}
 % =============================================================================
 
 Pour le réseau de neurones (\texttt{MLPClassifier}), une sélection dédiée est réalisée
@@ -171,15 +171,9 @@ des deux approches de sélection.
 \label{sec:visu}
 Suite à cette étape de sélections, nous avons choisi de conserver les descripteurs communs 
 aux trois méthodes RFECV, ANOVA et mutual information, ainsi 20 descripteurs sont 
-conservés pour les modèles de classification: 
-
-\noindent ['FT\_Adef', 'FT\_Aforme', 'FT\_Elo\_A', 'FT\_Elo\_H', 'FT\_Elo\_dif', 'FT\_Elo\_ratio', 'FT\_Hforme', 'FT\_forme\_diff',
-'FT\_forme\_ratio', 'FT\_prec\_diff', 'FT\_prec\_ratio', 'HT\_Elo\_A', 'HT\_Elo\_H', 'HT\_Elo\_dif', 'HT\_Elo\_ratio',
-'HT\_Hforme', 'HT\_def\_ratio', 'HT\_forme\_diff', 'HT\_forme\_ratio', 'Rank\_diff'].
+conservés pour les modèles de classification.
 \newline 
-Une liste de 6 descripteurs sera sélectionnée pour les réseaux de neurones : 
-
-\noindent ['FT\_Aprec\_weight', 'FT\_avgY\_diff', 'HT\_Elo\_A', 'HT\_Elo\_dif', 'HT\_Hdef', 'WinStreak\_diff'].
+Une liste de 6 descripteurs sera sélectionnée pour les réseaux de neurones.
 
 A présent, nous allons aborder la visualisation des données par rapport aux deux listes de 
 descripteurs. Nous avons utilisé Umap, ACP biplot ainsi que Boxplot afin de visualiser les 
@@ -187,8 +181,15 @@ données de différentes manières.
 
 \subsection{Umap}
 
-Nous avons utilisé la méthode Umap afin de réduire la dimensionnalité de nos données. 
-Grâce à cette méthode, nous avons projeté nos données en 2 et 3 dimensions.
+Afin de réduire la dimensionnalité de nos données, nous avons eu recours à la méthode 
+UMAP (Uniform Manifold Approximation and Projection). Cette technique nous a permis 
+de projeter nos données dans des espaces de 2 et 3 dimensions, facilitant ainsi leur 
+visualisation. Pour ce faire, UMAP commence par identifier les voisins les plus 
+proches de chaque point afin de construire un graphe de voisinage représentant la 
+structure locale des données. Ce graphe est ensuite utilisé pour projeter les 
+données dans un espace de dimension inférieure, tout en préservant au mieux 
+les relations de proximité entre les points.
+
 
 \begin{figure}[H]
     \centering
@@ -209,7 +210,7 @@ Grâce à cette méthode, nous avons projeté nos données en 2 et 3 dimensions.
     \end{minipage}
 \end{figure}
 
-Sur la figure \ref{fig:umap_20} nous avons projeté nos données en utilisant les 
+\noindent Sur la figure \ref{fig:umap_20} nous avons projeté nos données en utilisant les 
 descripteurs sélectionnés par RFECV, ANOVA, Mutual information. Sur la figure \ref{fig:umap_6} 
 nous avons 
 projeté en utilisant les descripteurs retenues grâce au MLP utilisant la méthode ECD 
@@ -238,6 +239,13 @@ la séparabilité de nos données.
 
 
 \subsection{ACP}
+
+L'ACP (Analyse en Composantes Principales) est une méthode de réduction de 
+dimensionnalité appliquée à un jeu de données. Elle consiste à identifier, 
+à partir d'un dataset de dimension N, les axes (ou composantes principales) 
+le long desquels la variance des données est maximale, permettant ainsi de 
+résumer l'information essentielle en un nombre réduit de dimensions.
+
 \begin{figure}[H]
     \centering
     % Première mini-page (gauche)
@@ -253,13 +261,34 @@ la séparabilité de nos données.
         \centering
         \includegraphics[width=\textwidth]{../../../plot/acp_2d_ft_ecd.png}
         \caption{ACP 2D : 6 features (modèle ECD).}
-        \label{fig:acp_3d_6}
+        \label{fig:acp_2d_6}
     \end{minipage}
 \end{figure}
 
+Nous affichons également nos données en utilisant l'ACP sur les figures \ref{fig:acpd_2d_20} et \ref{fig:acp_2d_6}
+
+\subsection{Boîtes à moustaches}
+
+La boîte à moustaches (Boxplot) est un outil d'analyse statistique permettant de 
+visualiser la distribution des données selon un paramètre donné. 
+
+\begin{figure}[H]
+\centering
+    \includegraphics[width=0.3\textwidth]{../../../plot/info_boxplot.png}
+    \caption{Description d'une Boîte à moustache}
+    \label{fig:info_Boxplot}
+\end{figure}
+
+\noindent Le bloc central, appelé boîte, est délimité par le $1^{er}$ et le $3^{eme}$ 
+quartile, encadrant ainsi 50\% des données, tandis que 
+la médiane ($2^{eme}$ quartile) est représentée par un trait à l'intérieur de la boîte. 
+Les moustaches, quant à elles, s'étendent jusqu'aux valeurs minimale et maximale du jeu 
+de données, à condition que celles-ci ne dépassent pas $1.5$ fois l'écart 
+interquartile (EI). Dans le cas contraire, elles sont limitées à 
+1.5 $\times $\text{EI}, et les valeurs au-delà sont considérées comme des valeurs 
+aberrantes, généralement représentées par des points isolés.
 
 
-\subsection{Boxplot}
 
 \begin{figure}[H]    
     \centering
@@ -268,7 +297,7 @@ la séparabilité de nos données.
     \label{fig:Boxplot_20}
 \end{figure}
 
-Nous avons également comparé la séparabilité des classes en utilisant la cible "Hvs" 
+Nous avons comparé la séparabilité des classes en utilisant la cible "Hvs" 
 ( Home versus Rest ). 
 
 \begin{figure}[H] 

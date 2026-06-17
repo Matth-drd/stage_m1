@@ -53,9 +53,9 @@ Les variables de résultat et de jeu couvrent la fin de match
 % ============================================================
 
 
-\noindent L'étape de préparation a été réalisée sous Python avec la bibliothèque
-\texttt{Pandas}. Elle consiste à transformer les données brutes issues des
-dix saisons et cinq championnats en un dataset exploitable pour l'apprentissage.
+\noindent L'étape de préparation consiste à transformer les données brutes issues des
+dix saisons et cinq championnats en un dataset exploitable pour l'apprentissage 
+évitant la fuite de données.
 
 % ============================================================
 
@@ -158,25 +158,31 @@ divisions par zéro.
 \section{Transformation et Normalisation des Données des bookmakers}
 Afin d'établir une comparaison entre notre modèle de classification 
 binaire et les bookmakers, nous avons procédé à une restructuration des 
-cotes des bookmakers (Bet365, Pinnacle, etc.) \cite{rogier}. La méthodologie employée est la suivante, 
-dans un premier temps inversion des cotes afin de convertir les cotes décimales en 
+cotes des bookmakers (Bet365, Pinnacle, etc) cette logique est abordée dans 
+\cite{rogier}. La méthodologie employée est la suivante, 
+dans un premier temps nous inversons les cotes afin de convertir les cotes décimales en 
 probabilités implicites brutes selon la formule $P_{brute} = \frac{1}{\text{cote}}$.
 Par la suite, afin de pouvoir comparer avec un modèle OvR, nous avons binarisé les issues 
 du match nul ($P_D$) et de la victoire extérieure ($P_A$) pour créer la classe 
 complémentaire au succès à domicile, notée $P_{Reste}$. Enfin, les probabilités brutes 
 ont été normalisées afin que la somme des probabilités de chaque 
-bookmaker soit égale à 1.
+bookmaker soit égale à 1, cela permet de supprimer la marge des bookmakers.
 
 Cette étape garantit que le modèle et les bookmakers sont évalués sur le même 
 espace probabiliste : $P(Home) + P(Reste) = 1$.
 
-
-Par la suite, nous avons procédé à un classement des bookmakers 
-entre eux à l'aide d'un Critical Difference diagramme\footnote{https://mirkobunse.github.io/CriticalDifferenceDiagrams.jl/dev/}. 
-Cette méthode se 
-base sur un test de Friedman afin de déterminer s'il existe ou non des différences 
-significatives entre les éléments comparés. Une fois ce test réalisé, l'analyse peut 
-avoir lieu. 
+Par la suite, nous avons procédé à la comparaison des bookmakers à l'aide d'un diagramme des 
+différences critiques (Critical Difference Diagram)
+\footnote{https://mirkobunse.github.io/CriticalDifferenceDiagrams.jl/dev/}. 
+Cette méthode repose d'abord sur le test de Friedman, qui permet de déterminer si 
+des différences statistiquement significatives existent entre les bookmakers 
+considérés. Lorsque ce test met en évidence une différence globale significative, 
+une analyse post hoc basée sur un test de Nemenyi peut alors être 
+réalisée afin d'identifier les bookmakers qui 
+se distinguent significativement les uns des autres. Le diagramme représente les 
+rangs moyens obtenus par chaque bookmaker et met en évidence les groupes dont les 
+performances ne diffèrent pas significativement. Ces deux tests sont détaillés 
+dans \cite{demsar}.
 
 \begin{figure}[H]
     \centering 
@@ -184,7 +190,7 @@ avoir lieu.
     \caption{Diagram de différences critique entre les bookmaker}
     \label{fig:cdd}
 \end{figure}
-\noindent Sur la figure \ref{fig:cdd} le trait noir reliant deux couleur indique qu'il n'y a pas 
+\noindent Sur la figure \ref{fig:cdd} la crossbar noire reliant deux couleur indique qu'il n'y a pas 
 de différence significative entre les deux bookmakers. 
 
 
@@ -209,29 +215,29 @@ cela nous permettra si nécessaire de combiner les modèles afin
 d'obtenir une prédiction plus robuste.
 
 
-\subsection{Validation Statistique par Tests de Friedman et Nemenyi}
+% \subsection{Validation Statistique par Tests de Friedman et Nemenyi}
 
-L'évaluation de la précision des bookmakers repose sur une approche
-statistique rigoureuse en deux étapes, visant à comparer les rangs
-moyens des \textit{Log-Loss} binaires obtenues sur l'issue « Home
-vs Reste ».
+% L'évaluation de la précision des bookmakers repose sur une approche
+% statistique rigoureuse en deux étapes, visant à comparer les rangs
+% moyens des \textit{Log-Loss} binaires obtenues sur l'issue « Home
+% vs Reste ».
 
-\begin{itemize}
-    \item \textbf{Test de Friedman :} Nous utilisons ce test
- non-paramétrique pour vérifier s'il existe une différence
- significative globale entre les performances des différents
- bookmakers. Le rejet de l'hypothèse nulle ($p < 0,05$) indique
- qu'au moins un bookmaker se distingue statistiquement des autres.
-    \item \textbf{Test Post-hoc de Nemenyi :} Suite au test de Friedman,
- le test de Nemenyi est appliqué pour identifier les paires
- de bookmaker dont les performances diffèrent significativement.
- Ce test permet de calculer la \textit{Critical Difference} (CD).
-    \item \textbf{Interprétation du CD Diagram :} Sur le diagramme généré,
- la position sur l'axe des abscisses indique le rang moyen (un
- rang proche de 1 étant optimal). Les segments horizontaux relient
- les groupes de bookmakers dont la différence de performance n'est pas
- statistiquement significative au seuil $\alpha = 0,05$.
-\end{itemize}
+% \begin{itemize}
+%     \item \textbf{Test de Friedman :} Nous utilisons ce test
+%  non-paramétrique pour vérifier s'il existe une différence
+%  significative globale entre les performances des différents
+%  bookmakers. Le rejet de l'hypothèse nulle ($p < 0,05$) indique
+%  qu'au moins un bookmaker se distingue statistiquement des autres.
+%     \item \textbf{Test Post-hoc de Nemenyi :} Suite au test de Friedman,
+%  le test de Nemenyi est appliqué pour identifier les paires
+%  de bookmaker dont les performances diffèrent significativement.
+%  Ce test permet de calculer la \textit{Critical Difference} (CD).
+%     \item \textbf{Interprétation du CD Diagram :} Sur le diagramme généré,
+%  la position sur l'axe des abscisses indique le rang moyen (un
+%  rang proche de 1 étant optimal). Les segments horizontaux relient
+%  les groupes de bookmakers dont la différence de performance n'est pas
+%  statistiquement significative au seuil $\alpha = 0,05$.
+% \end{itemize}
 
 
 
