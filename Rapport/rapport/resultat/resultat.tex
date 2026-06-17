@@ -12,7 +12,7 @@ simultanément vérifiées :
   \item le pari constitue un \textit{value bet}, c'est-à-dire que la probabilité implicite du bookmaker
         est inférieure à celle du modèle : $\hat{p}_i > 1 / c_i$, où $c_i$ désigne la cote proposée.
 \end{enumerate}
-La mise unitaire suit une stratégie par paliers selon le niveau de confiance :
+La mise dynamique suit une stratégie par paliers selon le niveau de confiance :
 $10$\,€ lorsque $\hat{s}_m \leq \hat{p}_i < \hat{s}_m + 0{,}10$,
 et $30$\,€ lorsque $\hat{p}_i \geq \hat{s}_m + 0{,}10$.
 En l'absence de pari éligible, aucune mise n'est engagée.
@@ -24,6 +24,7 @@ seule la mise reste fixe à 10 €.
 Nous pouvons ainsi comparer les deux stratégies de mise et ainsi chercher la meilleure.
 %%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%
+\section{Performances financière}
 \begin{figure}[H]
     \includegraphics[width=\textwidth]{../../plot/maj/ml_stat_4/bilan_financier.png}
     \caption{Comparaison des modèles}
@@ -32,18 +33,58 @@ Nous pouvons ainsi comparer les deux stratégies de mise et ainsi chercher la me
 
 \noindent Sur la figure \ref{fig:mlp_ml} nous avons comparé les modèles ML ainsi que les modèles Poisson. 
 La métrique utilisée 
-pour la comparaison est le ROI \ref{sec:roi} que nous avons implémenté de deux façons différentes. 
-Dans un premier temps avec une mise fixe à 10 €, dans un second temps afin d'essayer d'améliorer les 
-profits nous avons mis en place une mise dynamique. En fonction du seuil de confiance, ie la 
-probabilité de la prédiction, nous adaptons la mise. 
-Par exemple pour une probabilité comprise entre 0.5 et 0.6 la mise sera de 10, entre 0.6 et 0.7 
-la mise est de 20 au dela de 0.7 la mise est de 30.
+pour la comparaison est le ROI. Le Résultat "ROI Std 0.5" représente le seuil standard de 0.5, 
+le résultat "ROI Seuil Opti" utilise donc le seuil optimal trouvé et la mise fixe. Enfin le 
+"ROI Dyn Opti" utilise le seuil optimal ainsi que la stratégie de mise dynamique.
 
-\noindent Nous pouvons donc observer que le modèle le plus rentable semble être le SVM à noyau RBF. 
-De plus on observe que la stratégie mêlant seuil optimal et mise dynamique permet d'obtenir un retour sur 
-investissement de 5.71\% comparé à 4.9 en utilisant simplement le seuil optimal. 
+\noindent Nous pouvons donc observer que le modèle le plus rentable semble être le 
+SVM à noyau RBF. De plus nous observons que la stratégie mêlant seuil optimal et 
+mise dynamique permet d'obtenir un retour sur investissement de 5.71\% comparé 
+à 4.9\% en utilisant simplement le seuil optimal. La valeur "VB" est présente pour les modèles 
+ne présentant pas de seuil de confiance, le seul seuil retenu est celui du value bet.
+
+\begin{table}[H]
+\centering
+\caption{Volume de paris engagés (nombre de matchs misés) par modèle et stratégie}
+\label{tab:volume_paris}
+\begin{tabular}{l|c|c|c}
+\hline
+\textbf{Modèle} & \textbf{Paris Standard} & \textbf{Paris Seuil Opti} & \textbf{Paris Dyn Opti} \\
+\hline
+\hline
+\multicolumn{4}{l}{\textit{Modèles de Machine Learning}} \\
+\hline
+SVM RBF (base) & 1558 & 42 & 17 \\
+RandomForest (base) & 1411 & 119 & 95 \\
+MLP (Optimisé) & 1358 & 453 & 246 \\
+SVM RBF (Optimisé) & 1445 & 627 & 311 \\
+XGBoost (Base) & 1718 & 394 & 329 \\
+LightGBM (Base) & 1738 & 478 & 387 \\
+XGBoost (Optimisé) & 1769 & 697 & 429 \\
+MLP (Base) & 1312 & 703 & 446 \\
+LogisticRegression (Optimisé) & 1755 & 680 & 465 \\
+RandomForest (Optimisé) & 1776 & 700 & 466 \\
+LightGBM (Optimisé) & 1765 & 695 & 511 \\
+LogisticRegression (Base) & 1784 & 723 & 522 \\
+\hline
+\hline
+\multicolumn{4}{l}{\textit{Modèles Statistiques \& Références}} \\
+\hline
+Dixon-Coles (Optimisé + Temps) & 1399 & 1399 & 1399 \\
+Dixon-Coles (Stats) & 1425 & 1425 & 1425 \\
+Baseline (Toujours 1) & 3558 & 3558 & 3558 \\
+\hline
+\end{tabular}
+\end{table}
+Nous pouvons constater grâce à \ref{tab:volume_paris} que le SVM de base bien qu'aillant le 
+meilleur ROI, présente le plus faible nombre de paris. Nous comprenons donc que ce modèle ne 
+paris uniquement que lorsque la probabilité est relativement élevée. Le SVM optimisé semble 
+montrer de bonnes performances financière tout en maintenant un nombre de paris supérieur 
+à 300 et de bonnes performances prédictives détaillées ci-après.
 
 
+
+\section{Performances prédictives}
 \begin{figure}[H]
     \includegraphics[width=\textwidth]{../../plot/maj/ml_stat_4/metriq.png}
     \caption{Comparaison des métriques}
@@ -55,13 +96,19 @@ investissement de 5.71\% comparé à 4.9 en utilisant simplement le seuil optima
 ainsi voir que tous les modèles dépassent la Baseline, cependant, le meilleur score f1 reste celui 
 de la baseline. Cela s'explique par le fait que les modèles sont entraînés de sorte à optimiser le profit 
 et non la qualité prédictive. 
-Nous affichons également le score de "Recall" afin de mieux comprendre les résultats et les modèles.
+Nous affichons également le score de "Recall" afin de mieux comprendre les résultats et les modèles.\\
+
 Le principal objectif visant à dépasser la prédiction naïve est atteint, en 
 effet sur les deux tableaux, nous observons bien que les modèles ML sont meilleurs. Nous pouvons 
 également observer que le SVM (RBF) qui avait le meilleur ROI pocède un score-f1 très bas (0.038), mais 
 avec une précision de 73\%. Il présente un recall très faible, de 1.95\%, il ignore donc plus de 98\% 
 des bons paris pour ne pas prendre de risque. 
+Nous observons que le meilleur modèles d'un point de vue prédictif est le SVM optimisé. Il 
+présente le deuxième meilleur ROI et les meilleurs Performances prédictives. 
 
+
+
+\section{Classement des modèles}
 \begin{figure}[H]
         \centering
         \includegraphics[width=\textwidth]{../../plot/maj/ml_stat_4/cdd.png}
@@ -75,11 +122,12 @@ des bons paris pour ne pas prendre de risque.
         \label{fig:cdd_ml_stat_brier}
 \end{figure}
 
-\noindent La figure \ref{fig:cdd_ml_stat_logloss} permet de classer les modèles entre eux 
-mais également par rapport au bookmaker Bwin en utilisant la métrique de log loss. La figure \ref{fig:cdd_ml_stat_brier} 
-compare le Brier score. \\
-Les "crossbar" regroupent les modèles 
-ne présentant pas de différence significative, ainsi plusieurs groupes peuvent être 
+\noindent Les figures \ref{fig:cdd_ml_stat_logloss} et \ref{fig:cdd_ml_stat_brier} 
+permettent de classer les modèles et le bookmaker Bwin en utilisant la métrique de 
+log loss, respectivement le Brier score.\\
+
+Les "crossbar" regroupent les modèles ne présentant pas de différence 
+significative, ainsi plusieurs groupes peuvent être 
 construits. Le plus important reste le groupe des équivalents du bookmaker, 
 [Bwin, SVM (opti), RandomForest (opti), LogistiqueRegression (opti), LightGBM (opti)].
 

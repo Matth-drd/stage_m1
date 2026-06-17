@@ -3,9 +3,14 @@
 En conclusion, ce stage aura permis de mettre en place une méthodologie de la 
 collecte des données jusqu'à la prédiction et l'évaluation des modèles. 
 
-Les résultats que nous avons pu obtenir indiquent clairement que les modèles de Machine 
-Learning surpassent l'approche statistique classique, tant en termes de capacité prédictive 
-que de rentabilité. Plusieurs pistes restent néanmoins ouvertes pour approfondir ce 
+Les résultats obtenus indiquent clairement que les modèles de Machine Learning 
+surpassent l'approche statistique classique, tant en termes de capacité prédictive 
+que de rentabilité. Ces performances mettent toutefois en évidence un élément crucial : 
+la rentabilité à long terme dépend directement de la sélectivité du modèle. 
+Ce dernier doit restreindre son volume de paris via un seuil optimal pour ne pas 
+prendre de risque inutile et perdre de l'argent.
+
+Plusieurs pistes restent néanmoins ouvertes pour approfondir ce 
 travail. Tout d'abord, l'extension de la base de données constituerait une amélioration 
 naturelle : intégrer davantage de championnats (compétitions européennes secondaires, 
 voire d'autres confédérations) et un historique plus long permettrait d'augmenter la 
@@ -17,7 +22,8 @@ et ouvrir la voie à une prédiction dynamique, actualisée tout au long de la r
 
 Toutefois, il reste relativement compliqué au vu de la visualisation section \ref{sec:visu} 
 de prédire avec certitude les matchs de foot. En effet, grace aux méthodes de visualisation 
-nous voyons clairement que les données sont relativement peut séparables. 
+nous voyons clairement que les données sont relativement peu séparables, ce qui explique 
+nos résultats plutôt faible en terme de performances prédictive et financière. 
 La méthodologie de sélection de variables pourrait elle aussi être affinée, par 
 exemple en explorant des approches d'embedding ou des méthodes de réduction de dimension 
 non linéaires en amont de la sélection, afin de capturer des interactions plus complexes 

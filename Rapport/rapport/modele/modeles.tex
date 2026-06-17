@@ -19,8 +19,8 @@ la log-loss et le ROI, que nous avons détaillés dans le chapitre \ref{chap:mé
 \subsubsection{Adaptation en rolling strict et Lissage Bayésien}
 
 Dans la formulation originale de Maher (1982), les paramètres sont estimés de 
-manière statique sur l'ensemble de la saison. Cette approche introduit un 
-\textit{data leakage} majeur, car des informations chronologiquement futures sont 
+manière statique sur l'ensemble de la saison. Cette approche introduit une 
+fuite de données majeure, car des informations chronologiquement futures sont 
 utilisées pour prédire des matchs passés. De plus, la normalisation historique par 
 $\sqrt{S_x}$ entraîne un effondrement mathématique des paramètres au fil des saisons, ce 
 dénominateur croissant indéfiniment avec le nombre total de matchs joués dans la ligue.
@@ -86,15 +86,16 @@ indépendantes sont alors réajustées par l'avantage moyen du terrain et s'écr
 \bar{\nu}_{\text{ligue}}^{(t)}
 \]
 Cette formulation garantit que $\mu^{(t)}$ et $\nu^{(t)}$ conservent rigoureusement 
-leur sens statistique d'espérances de buts par match à l'instant $t$, tout en 
+leur sens statistique d'espérances de buts par match, tout en 
 éliminant les anomalies sur les scores extrêmes.
 
 %%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%
 \subsection{Dixon-Coles}
-Dans l'introduction, nous avions abordé les améliorations apportées par Dixon-Coles. 
-Nous les détaillons à présent plus en profondeur.
+Dans l'introduction, nous avons abordé les améliorations apportées par Dixon-Coles. 
+Nous les détaillons à présent plus en profondeur, en débutant par le facteur 
+qui gère la dépendance des faibles scores.
 \[
 \tau(x, y) = 
 \begin{cases} 
@@ -106,9 +107,10 @@ Nous les détaillons à présent plus en profondeur.
 \end{cases}
 \]
 
-\noindent Nous avons ainsi, $$L(\alpha, \beta, \gamma, \delta, \rho) = \tau(x, y, \mu, \nu, \rho) \times 
+\noindent Nous avons ainsi, 
+$$L(\alpha, \beta, \gamma, \delta, \rho) = \tau(x, y, \mu, \nu, \rho) \times 
 \frac{\mu^x e^{-\mu}}{x!} \times \frac{\nu^y e^{-\nu}}{y!}$$
-D'où : $\log L=\log(\tau)+x\log(\mu)-\mu-\log(x!) + y\log(\nu)-\nu-\log(y!)$. 
+D'où : $\log L=\log(\tau)+x\log(\mu)-\mu-\log(x!) + y\log(\nu)-\nu-\log(y!)$.\\ 
 Nous cherchons $\rho$ qui maximise cette log-vraisemblance. Nous avons donc, 
 $$\frac{\partial}{\partial\rho}\log L = \frac{\tau'}{\tau} $$ 
 or 
@@ -122,7 +124,7 @@ or
 \end{cases}
 \]
 
-$\rho^*$ vérifie $\partial_\rho \log L(\rho^*) = 0$
+$\rho^*$ vérifie $\partial_\rho \log L(\rho^*) = 0$. 
 Dans notre cas, étant donné $N$ matchs, nous avons : 
 $$\partial_\rho \log L = \sum_{1}^{N}\frac{\tau'(x_k,y_k)}{\tau(x_k,y_k)}$$
 Autrement dit,
@@ -140,7 +142,7 @@ cette fonction permet de donner plus d'importance aux matchs récents.
 \subsubsection{Prédiction de l'issue du match}
 
 Comme nous l'avons précisé en introduction de ce rapport, deux prédictions sont majoritaires. L'une basée sur 
-le nombre de buts, l'autre sur l'issue du match. Les modèles statistique implémentés se basent sur le nombre de buts. 
+le nombre de buts, l'autre sur l'issue du match. Les modèles statistiques implémentés se basent sur le nombre de buts. 
 En effet, la distribution de Poisson décrit l'évolution du nombre de buts. Cependant, les modèles de machine 
 learning utilisés, eux, prédisent l'issue des matchs, nous devons donc effectuer cette transition afin de pouvoir 
 comparer l'approche ML avec l'approche statistique. 
@@ -150,8 +152,8 @@ Par suite, la probabilité $P(X=x, Y=y) = P(X=x) \times P(Y=y)$ ce qui nous perm
 construire la matrice $M$ telle que $M_{i,j} = P(X=i, Y=j)$ figure \ref{fig:matricMaher}. 
 Ainsi, la probabilité que l'équipe A gagne correspond à la probabilité qu'elle 
 marque plus de buts que l'équipe B. Autrement dit, la victoire de l'équipe à domicile 
-correspond aux coefficients de la matrice tel que $i>j$. Le match nul correspond à 
-la diagonale, et la victoire extérieure correspond à la matrice triangulaire 
+correspond aux coefficients de la matrice tels que $i>j$. Le match nul correspond à 
+la diagonale, et la victoire extérieure correspond aux coefficients de la matrice triangulaire 
 supérieure $i<j$ figure \ref{fig:matrixMaherSeparation}.
 
 \begin{figure}[H]
@@ -189,9 +191,11 @@ supérieure $i<j$ figure \ref{fig:matrixMaherSeparation}.
 \end{figure}
 
 Dans le cas de Dixon \& Coles, l'hypothèse d'indépendance n'est pas tout à fait la même 
-dans le cas des scores faibles. 
+concernant les faibles scores. 
 Pour traiter ce cas, ils ajoutent un facteur $\tau$, la matrice $M$ devient donc : 
-$M_{i,j}=\tau(i,j)\times P(X=i)\times P(Y=j)$.
+$M_{i,j}=\tau(i,j)\times P(X=i)\times P(Y=j)$. L'interprétation reste similaire à 
+celle de Maher, voir les figures \ref{fig:matricDC} et \ref{fig:matrixDCSeparation}.
+
 
 \section{Modèles de machine learning}
 \label{sec:ML}
@@ -224,8 +228,7 @@ combinant un grand nombre d'arbres de décision
 indépendants entraînés sur des sous-échantillons de données (bootstrap).
 
 Dans notre pipeline, le Random Forest utilise des poids de classes équilibrés 
-(class weight) pour compenser le déséquilibre initial du dataset (la victoire 
-à domicile représentant 45\,\% des observations).
+(class weight).
 Nous comparons une version de base et une version 
 optimisée par Random Search, portant sur le nombre d'arbres et la profondeur maximale. 
 
@@ -255,7 +258,8 @@ non linéaire. Cependant, le SVM ne fournit pas nativement de probabilités, mai
 des scores de distance à l'hyperplan. Pour intégrer ce modèle nous activons la méthode 
 de calibration de Platt (\texttt{probability=True}), 
 convertissant ces scores en probabilités. Cela nous permet d'évaluer les prédictions 
-au même titre que les autres algorithmes.
+au même titre que les autres algorithmes. Nous comparerons également une 
+version de base et optimisée.
 
 \subsection{LightGBM}
 
@@ -273,13 +277,14 @@ de base et une version optimisée par Random Search.
     \centering
     % --- Image du Haut ---
     \includegraphics[width=0.85\textwidth]{../../plot/leaf_tree.png}
+    \caption{Leaf-wise tree growth}
     \label{fig:leaf_tree}
     \vspace{0.5cm} % Ajuste l'espace vertical entre les deux images si besoin
     % --- Image du Bas ---
     \includegraphics[width=0.85\textwidth]{../../plot/level_tree.png}
     \label{fig:level_tree}
     \centering
-    \caption{extrait de la documentation de LightGBM. 
+    \caption{Level-wise tree growth. \\Extrait de la documentation de LightGBM. \\
     https://lightgbm.readthedocs.io/en/stable/Features.html}
 \end{figure}
 
@@ -288,9 +293,9 @@ de base et une version optimisée par Random Search.
 
 Nous avons également implémenté un Perceptron Multicouche (\textit{Multi-Layer Perceptron}, MLP) 
 tel qu'exploré par Carloni \textit{et al.}\cite{carloni}. Ce modèle se distingue des approches 
-précédentes par l'utilisation d'un espace de features dédié (\texttt{ft\_nn}), potentiellement 
+précédentes par l'utilisation d'un espace de caractéristiques dédié (\texttt{ft\_nn}), potentiellement 
 plus riche, et d'une normalisation stricte par \texttt{StandardScaler}, indispensable à la 
 convergence du réseau.
 La version de base est composée d'une couche cachée de 100 neurones, avec le solveur Adam, une 
 régularisation L2 ($\alpha = 10^{-4}$) et une tolérance de convergence stricte 
-($\texttt{tol} = 10^{-9}$). Une version optimisée est ensuite obtenue par Random Search.
+($\texttt{tol} = 10^{-5}$). Une version optimisée est ensuite obtenue par Random Search.
