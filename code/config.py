@@ -6,8 +6,8 @@
 
 split_ratio = .8
 poids_but = 2
-path_clean = '../data/csv/foot_v4.csv'
-path_clean_cell = 'data/csv/foot_v4.csv'
+path_clean = '../data/csv/foot_process.csv'
+path_clean_cell = 'data/csv/foot_process.csv'
 
 targets = ["FTR", "Hvs", 'Avs']
 
@@ -26,7 +26,8 @@ features = [
     'FT_avgY_ratio', 'FT_avgR_ratio', 'H_WinStreak', 'A_WinStreak',
     'H_LoseStreak', 'A_LoseStreak', 'WinStreak_diff', 'LoseStreak_diff', 'H_Rank', 'A_Rank', 'Rank_diff']
 
-# print(len(features))
+# print(len(features)) #:61
+
 # grace au random forest, on trouve les features classées par importance.
 # On choisis arbitrairement les 15 premières pour faire les modèles.
 # features_importante = ['FT_Elo_dif', 'FT_Elo_ratio', 'HT_Elo_dif', 'HT_Elo_ratio', 'HT_Elo_H',
@@ -75,4 +76,3 @@ ft_commune = [
 ECD = ['FT_Aprec_weight', 'FT_avgY_diff', 'HT_Elo_A', 'HT_Elo_dif', 'HT_Hdef', 'WinStreak_diff']
 ft_nn = ECD
 betting = ['B365H', 'B365D', 'B365A']
-
