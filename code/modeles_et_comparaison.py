@@ -49,19 +49,94 @@ TARGET_BIN = "Hvs"
 
 
 def split_data(X, y, ratio=SPLIT_RATIO):
-    """Découpe X et y en train/test selon un ratio chronologique."""
+    """
+    Découpe X et y en ensembles d'entraînement et de test selon un ratio chronologique.
+
+    Le découpage est effectué en conservant l'ordre des observations (pas de shuffle),
+    ce qui est important pour des séries temporelles ou des jeux de données temporels
+    où l'on veut éviter le leakage entre passé et futur.
+
+    Paramètres
+    -
+    X : pandas.DataFrame
+        DataFrame des features, ordonné par date/chronologie.
+    y : pandas.Series
+        Série des cibles correspondantes (même index/ordre que X).
+    ratio : float, optional
+        Fraction du jeu à utiliser pour l'entraînement (valeur par défaut : SPLIT_RATIO).
+
+    Returns
+    -
+    X_train, X_test, y_train, y_test : tuple
+        Tranches chronologiques (train d'abord, test ensuite) retournées sous forme
+        de slices pandas (views/indexées) : X_train, X_test, y_train, y_test.
+
+    Exemple
+    -
+    X_tr, X_te, y_tr, y_te = split_data(X, y, ratio=0.8)
+    """
     sp = int(len(X) * ratio)
     return X.iloc[:sp], X.iloc[sp:], y.iloc[:sp], y.iloc[sp:]
 
 
 def compute_f1(y_true, y_pred, target_name):
-    """Calcule le F1-score (pondéré pour FTR, binaire sinon)."""
+    """
+    Calcule le score F1.
+
+    Pour la target multi-classe "FTR" (Full Time Result) on retourne le F1
+    pondéré (average='weighted') pour tenir compte du déséquilibre entre classes.
+    Pour les targets binaires (ex. 'Hvs') on utilise la moyenne 'binary'.
+
+    zero_division=0 est activé afin d'éviter les warnings/erreurs lorsque
+    certaines prédictions n'ont pas de vrais positifs.
+
+    Paramètres
+    
+    y_true : array-like
+        Vérités terrain (labels).
+    y_pred : array-like
+        Prédictions binaires (ou labels prévus).
+    target_name : str
+        Nom de la target; utilisé pour choisir la stratégie d'averaging.
+
+    Retour
+    
+    float
+        Valeur du F1-score.
+    """
     avg = "weighted" if target_name == "FTR" else "binary"
     return f1_score(y_true, y_pred, average=avg, zero_division=0)
 
 
 def compute_roi(y_test, y_pred, cotes, mise=MISE_UNITE):
-    """ROI pour une stratégie de mise fixe sur chaque pari prédit positif."""
+    """
+    Calcule le Return On Investment (ROI) pour une stratégie de mise fixe.
+
+    La stratégie est simple : pour chaque match où la prédiction est 1 (pari placé),
+    on mise un montant fixe `mise`. Si le pari est gagnant (y_test == 1),
+    le gain brut est mise * cote. Le profit net est la somme des gains moins
+    la somme des mises.
+
+    Paramètres
+    -
+    y_test : array-like
+        Labels réels (0/1) sur la période de test.
+    y_pred : array-like
+        Prédictions binaires (0/1) indiquant si on place le pari.
+    cotes : array-like
+        Cotes (float) correspondantes à chaque match (ex. 1.85, 2.10 ...).
+    mise : float, optional
+        Montant misé par pari (défaut : MISE_UNITE).
+
+    Returns
+    -
+    roi : float
+        Retour sur investissement en pourcentage. 0.0 si aucune mise.
+    total_mise : int
+        Montant total misé (arrondi en int pour affichage).
+    profit_net : float
+        Profit net en unité monétaire (gains - mises).
+    """
     y_t = np.array(y_test)
     y_p = np.array(y_pred)
     c = np.array(cotes)
@@ -80,7 +155,36 @@ def compute_roi(y_test, y_pred, cotes, mise=MISE_UNITE):
 
 
 def compute_roi_par_modele(y_test, probas, cotes, seuil_optimal):
-    """ROI avec stratégie de mises par paliers selon la confiance du modèle."""
+    """
+    Calcule le ROI en utilisant une stratégie de mises par paliers basée sur la
+    probabilité prédite par le modèle et la cote (value betting).
+
+    Logique :
+    - On considère uniquement les paris où la probabilité prédite p est supérieure
+      à la probabilité implicite du bookmaker (1 / cote) — c'est un test de "value".
+    - Pour les probabilités comprises entre `seuil_optimal` et `seuil_optimal + 0.10`,
+      on mise 10. Pour les probabilités supérieures au seuil + 0.10, on mise 30.
+
+    Paramètres
+    -
+    y_test : array-like
+        Labels réels (0/1) sur la période de test.
+    probas : array-like
+        Probabilités prédites par le modèle pour la classe positive.
+    cotes : array-like
+        Cotes (float) correspondantes à chaque match.
+    seuil_optimal : float
+        Seuil minimal de confiance pour commencer à parier.
+
+    Returns
+    -
+    roi : float
+        ROI en pourcentage (0.0 si aucune mise).
+    total_mise : int
+        Somme des mises engagées (arrondie en int).
+    profit_net : float
+        Profit net réalisé (gains - mises).
+    """
     y_t = np.array(y_test)
     c = np.array(cotes)
     p = np.array(probas)
@@ -371,7 +475,7 @@ cotes_test_bilan = df[COTES_MAP[TARGET_BIN]].iloc[split_idx:]
 seuils_a_tester = np.arange(0.40, 0.85, 0.01)
 bilan_data = []
 
-# --- Baseline ---
+#  Baseline 
 preds_baseline = np.ones(len(y_test), dtype=int)
 f1_baseline = compute_f1(y_test, preds_baseline, TARGET_BIN)
 probas_baseline = 1 / cotes_test_bilan
@@ -397,7 +501,7 @@ tuning_resultats = {}
 for name, (model, X_te) in trained_models.items():
     probas = model.predict_proba(X_te)[:, 1]
 
-    preds_std = (probas >= 0.50).astype(int)
+    preds_std = (probas >= 0.5).astype(int)
     roi_std, mise_std, profit_std = compute_roi(y_test, preds_std, cotes_test_bilan)
 
     preds_sec = (probas >= SEUIL_SECURISE).astype(int)
@@ -405,7 +509,7 @@ for name, (model, X_te) in trained_models.items():
 
     meilleur_profit = -float("inf")
     meilleur_roi = -999
-    meilleur_seuil = 0.50
+    meilleur_seuil = 0.5
     meilleure_mise = 0
 
     for seuil in seuils_a_tester:
@@ -441,7 +545,7 @@ for name, (model, X_te) in trained_models.items():
         "F1 (Seuil)": round(f1_opti, 3),
     }
 
-# %%--- Affichage des tableaux ---
+# %% Affichage des tableaux 
 print("\n" + "=" * 95)
 print(f" TABLEAU DE BORD FINANCIER STATIQUE (Seuil Fixe = {SEUIL_SECURISE})")
 print("=" * 95)
@@ -466,7 +570,7 @@ roi_bl, mise_bl, profit_bl = compute_roi(y_test, preds_baseline, cotes_test_bila
 bilan_data_dynamique.append({
     "Modèle": "Baseline (Toujours 1)",
     "Seuil Opti": "-",
-    "ROI Std 0.50 (%)": roi_bl,
+    "ROI Std 0.5 (%)": roi_bl,
     "Profit Std": profit_bl,
     "|": "|",
     "ROI Seuil opti (%)": roi_sec_bl,
@@ -482,7 +586,7 @@ for name, (model, X_te) in trained_models.items():
     probas = model.predict_proba(X_te)[:, 1]
     seuil_custom = seuils_modeles.get(name, SEUIL_SECURISE)
 
-    preds_std = (probas >= 0.50).astype(int)
+    preds_std = (probas >= 0.5).astype(int)
     roi_std, mise_std, profit_std = compute_roi(y_test, preds_std, cotes_test_bilan_vals, mise=MISE_UNITE)
 
     preds_sec = (probas >= seuil_custom).astype(int)
@@ -493,7 +597,7 @@ for name, (model, X_te) in trained_models.items():
     bilan_data_dynamique.append({
         "Modèle": name,
         "Seuil Opti": seuil_custom,
-        "ROI Std 0.50 (%)": roi_std,
+        "ROI Std 0.5 (%)": roi_std,
         "Profit Std": profit_std,
         "|": "|",
         "ROI Seuil opti (%)": roi_sec,
@@ -505,14 +609,14 @@ for name, (model, X_te) in trained_models.items():
         "mise Dyn": mise_dyn,
     })
 
-# %%--- Affichage du Tableau Comparatif Financier ---
+# %% Affichage du Tableau Comparatif Financier 
 print("\n" + "=" * 115)
 print("             TABLEAU DE BORD COMPARATIF : MISES FIXES VS PALIERS DYNAMIQUES PAR MODÈLE")
 print("=" * 115)
 
 df_comparatif = pd.DataFrame(bilan_data_dynamique)
 colonnes_num = [
-    "ROI Std 0.50 (%)", "Profit Std", "ROI Seuil opti (%)", "Profit Sécu",
+    "ROI Std 0.5 (%)", "Profit Std", "ROI Seuil opti (%)", "Profit Sécu",
     "mise Sécu", "ROI Dyn Opti (%)", "Profit Dyn", "mise Dyn", "Seuil Opti",
 ]
 for col in colonnes_num:
@@ -537,9 +641,9 @@ bilan_metriques.append({
     "Log-Loss": round(log_loss(y_test, probas_baseline_ml), 4),
     "Brier Score": round(brier_score_loss(y_test, probas_baseline_ml), 4),
     "|": "|",
-    "Accuracy (0.50)": round(accuracy_score(y_test, preds_baseline), 3),
-    "F1 (0.50)": round(compute_f1(y_test, preds_baseline, TARGET_BIN), 3),
-    "Précision (0.50)": round(precision_score(y_test, preds_baseline, zero_division=0), 3),
+    "Accuracy (0.5)": round(accuracy_score(y_test, preds_baseline), 3),
+    "F1 (0.5)": round(compute_f1(y_test, preds_baseline, TARGET_BIN), 3),
+    "Précision (0.5)": round(precision_score(y_test, preds_baseline, zero_division=0), 3),
     "||": "||",
     "Seuil Opti": "-",
     "Accuracy (Opti)": round(accuracy_score(y_test, preds_baseline), 3),
@@ -551,7 +655,7 @@ for name, (model, X_te) in trained_models.items():
     probas = model.predict_proba(X_te)[:, 1]
     seuil_custom = seuils_modeles.get(name, SEUIL_SECURISE)
 
-    preds_050 = (probas >= 0.50).astype(int)
+    preds_05 = (probas >= 0.5).astype(int)
     preds_opti = (probas >= seuil_custom).astype(int)
 
     bilan_metriques.append({
@@ -559,9 +663,9 @@ for name, (model, X_te) in trained_models.items():
         "Log-Loss": round(log_loss(y_test, probas), 4),
         "Brier Score": round(brier_score_loss(y_test, probas), 4),
         "|": "|",
-        "Accuracy (0.50)": round(accuracy_score(y_test, preds_050), 3),
-        "F1 (0.50)": round(compute_f1(y_test, preds_050, TARGET_BIN), 3),
-        "Précision (0.50)": round(precision_score(y_test, preds_050, zero_division=0), 3),
+        "Accuracy (0.5)": round(accuracy_score(y_test, preds_05), 3),
+        "F1 (0.5)": round(compute_f1(y_test, preds_05, TARGET_BIN), 3),
+        "Précision (0.5)": round(precision_score(y_test, preds_05, zero_division=0), 3),
         "||": "||",
         "Seuil Opti": seuil_custom,
         "Accuracy (Opti)": round(accuracy_score(y_test, preds_opti), 3),
@@ -591,10 +695,9 @@ for name, (model, _) in trained_models.items():
     print(f"Sauvegardé : models/{nom_fichier}.pkl")
 
 # %%=============================================================================
-# VISUALISATIONS
-# =============================================================================
+# visu
 
-# --- Log-Loss par modèle ---
+#  Log-Loss par modèle 
 plt.figure()
 plt.bar(df_metriques["Modèle"], df_metriques["Log-Loss"], edgecolor="black")
 plt.xticks(rotation=45, ha="right")
@@ -604,11 +707,11 @@ plt.title("Comparaison du Log-Loss par Modèle")
 plt.tight_layout()
 plt.show()
 
-# --- Métriques ML groupées ---
+#  Métriques ML groupées 
 metriques_a_afficher = [
-    "Accuracy (0.50)", "Accuracy (Opti)",
-    "F1 (0.50)", "F1 (Opti)",
-    "Précision (0.50)", "Précision (Opti)",
+    "Accuracy (0.5)", "Accuracy (Opti)",
+    "F1 (0.5)", "F1 (Opti)",
+    "Précision (0.5)", "Précision (Opti)",
 ]
 couleurs_ml = ["#1f77b4", "#aec7e8", "#2ca02c", "#98df8a", "#ff7f0e", "#ffbb78"]
 
@@ -629,8 +732,8 @@ ax.legend(loc="upper left", ncols=3)
 ax.grid(True, axis="y", linestyle=":", alpha=0.6)
 plt.show()
 
-# --- ROI et Profits financiers ---
-metriques_roi = ["ROI Std 0.50 (%)", "ROI Seuil opti (%)", "ROI Dyn Opti (%)"]
+#  ROI et Profits financiers 
+metriques_roi = ["ROI Std 0.5 (%)", "ROI Seuil opti (%)", "ROI Dyn Opti (%)"]
 metriques_profit = ["Profit Std", "Profit Sécu", "Profit Dyn"]
 couleurs_roi = ["#1d3557", "#457b9d", "#a8dadc"]
 couleurs_profit = ["#ca6702", "#ee9b00", "#e9d8a6"]
@@ -667,64 +770,163 @@ ax2.set_xticklabels(modeles, rotation=45, ha="right")
 plt.suptitle("Performances Financières des Modèles (Hors Baseline)", fontsize=16, fontweight="bold")
 plt.show()
 
-# %%=============================================================================
-# PROFITS CUMULÉS EN SÉRIE TEMPORELLE (MATCH PAR MATCH)
-# =============================================================================
+# %%==========================================================
+# PROFITS CUMULÉS
+# =============================================================
 
 y_test_arr = y_test
 cotes_arr = cotes_test_bilan_vals
 index_matchs = np.arange(1, len(y_test_arr) + 1)
 
-dict_profits_cumules = {}
+dict_profits_base = {}
+dict_profits_opti = {}
 
 # Baseline
 gains_bl = np.where(y_test_arr == 1, 10 * cotes_arr, 0.0)
-dict_profits_cumules["Baseline (Toujours 1)"] = np.cumsum(gains_bl - 10)
+dict_profits_base["Baseline (Toujours 1)"] = np.cumsum(gains_bl - 10)
+dict_profits_opti["Baseline (Toujours 1)"] = np.cumsum(gains_bl - 10)
 
-# Modèles
 for name, (model, X_te) in trained_models.items():
     probas = model.predict_proba(X_te)[:, 1]
     seuil_custom = seuils_modeles.get(name, SEUIL_SECURISE)
 
-    # Standard (seuil 0.50, mise fixe 10€)
-    preds_std = (probas >= 0.50).astype(int)
+    # Seuil 0.5
+    preds_std = (probas >= 0.5).astype(int)
     gains_std = np.where((preds_std == 1) & (y_test_arr == 1), 10 * cotes_arr, 0.0)
     mises_std = np.where(preds_std == 1, 10, 0.0)
-    dict_profits_cumules[f"{name} (Base)"] = np.cumsum(gains_std - mises_std)
+    dict_profits_base[name] = np.cumsum(gains_std - mises_std)
 
-    # Dynamique (mises par paliers)
+    # Dynamique
     prob_bookmaker = 1 / cotes_arr
     is_value = probas > prob_bookmaker
     mises_dyn = np.zeros(len(probas))
     mises_dyn[(probas >= seuil_custom) & (probas < seuil_custom + 0.10) & is_value] = 10.0
     mises_dyn[(probas >= seuil_custom + 0.10) & (probas <= 1.0) & is_value] = 30.0
-
     gains_dyn = np.where((mises_dyn > 0) & (y_test_arr == 1), mises_dyn * cotes_arr, 0.0)
-    dict_profits_cumules[f"{name} (Optimisé)"] = np.cumsum(gains_dyn - mises_dyn)
+    dict_profits_opti[name] = np.cumsum(gains_dyn - mises_dyn)
 
-fig, axs = plt.subplots(1, 2, figsize=(16, 7), sharey=True)
+fig, axs = plt.subplots(1, 2, figsize=(18, 9), sharey=True)
 
-for ax, type_modele in zip(axs, ["Base", "Optimisé"]):
+for ax, (type_modele, d) in zip(axs, [("Base (seuil 0.5)", dict_profits_base),
+                                      ("Optimisé (paliers dyn.)", dict_profits_opti)]):
     ax.axhline(y=0, color="black", linestyle="-", alpha=0.4)
-    for nom, profit_serie in dict_profits_cumules.items():
-        est_opti = "Optimisé" in nom
+    for nom, profit_serie in d.items():
         is_baseline = nom.startswith("Baseline")
-        show = (
-                is_baseline
-                or (type_modele == "Optimisé" and est_opti)
-                or (type_modele == "Base" and not est_opti)
-        )
-        if show:
-            style = {"linestyle": "--", "linewidth": 2.0, "color": "red"} if is_baseline else {"linewidth": 1.5}
-            label = f"{nom.replace(' (Base)', '').replace(' (Optimisé)', '')} ({profit_serie[-1]:.1f}€)"
-            ax.plot(index_matchs, profit_serie, label=label, **style)
-
+        style = {"linestyle": "--", "linewidth": 2.0, "color": "red"} if is_baseline else {"linewidth": 1.5}
+        ax.plot(index_matchs, profit_serie,
+                label=f"{nom} ({profit_serie[-1]:.1f}€)", **style)
     ax.set_title(f"Modèles : {type_modele}", fontsize=13, fontweight="bold")
     ax.set_xlabel("Matchs Évalués (Chronologique)", fontsize=10)
     ax.grid(True, linestyle=":", alpha=0.6)
-    ax.legend(loc="lower left", fontsize=8, ncols=2)
+    ax.legend(loc="lower left", fontsize=12, ncols=2)
 
 axs[0].set_ylabel("Profit Net Cumulé (€)", fontsize=11)
+plt.tight_layout()
+plt.show()
+
+# %%===================================================
+# PROFITS CUMULÉS mod base vs opti
+# ==========================================================
+
+y_test_arr = y_test
+cotes_arr = cotes_test_bilan_vals
+index_matchs = np.arange(1, len(y_test_arr) + 1)
+prob_bookmaker = 1 / cotes_arr
+
+# Dictionnaires pour séparer les architectures de modèles
+profits_modeles_base = {
+    "Seuil 0.5": {},
+    "Seuil Optimal Fixe": {},
+    "Seuil Optimal + Dyn": {}
+}
+
+profits_modeles_opti = {
+    "Seuil 0.5": {},
+    "Seuil Optimal Fixe": {},
+    "Seuil Optimal + Dyn": {}
+}
+
+#  Calcul de la Baseline (Identique pour tous) 
+gains_bl = np.where(y_test_arr == 1, 10 * cotes_arr, 0.0)
+baseline_cumule = np.cumsum(gains_bl - 10)
+
+for nom_strategie in ["Seuil 0.5", "Seuil Optimal Fixe", "Seuil Optimal + Dyn"]:
+    profits_modeles_base[nom_strategie]["Baseline (Toujours 1)"] = baseline_cumule
+    profits_modeles_opti[nom_strategie]["Baseline (Toujours 1)"] = baseline_cumule
+
+#  Calcul des profits par modèle et par stratégie 
+# Attention : on utilise l'extraction (model, X_va, X_te) suite à la correction du leakage
+for name, (model, X_te) in trained_models.items():
+    probas = model.predict_proba(X_te)[:, 1]
+    seuil_custom = seuils_modeles.get(name, SEUIL_SECURISE)
+    is_value = probas > prob_bookmaker
+
+    # Seuil standard 0.5 (Mise fixe 10€)
+    preds_05 = (probas >= 0.5).astype(int)
+    mises_05 = np.where(preds_05 == 1, 10.0, 0.0)
+    gains_05 = np.where((preds_05 == 1) & (y_test_arr == 1), 10.0 * cotes_arr, 0.0)
+    profit_05 = np.cumsum(gains_05 - mises_05)
+
+    # Seuil Optimal (Mise fixe 10€)
+    preds_opti = (probas >= seuil_custom).astype(int)
+    mises_opti = np.where(preds_opti == 1, 10.0, 0.0)
+    gains_opti = np.where((preds_opti == 1) & (y_test_arr == 1), 10.0 * cotes_arr, 0.0)
+    profit_opti = np.cumsum(gains_opti - mises_opti)
+
+    # Seuil Optimal + Mises par Paliers Dynamiques
+    mises_dyn = np.zeros(len(probas))
+    mises_dyn[(probas >= seuil_custom) & (probas < seuil_custom + 0.10) & is_value] = 10.0
+    mises_dyn[(probas >= seuil_custom + 0.10) & (probas <= 1.0) & is_value] = 30.0
+    gains_dyn = np.where((mises_dyn > 0) & (y_test_arr == 1), mises_dyn * cotes_arr, 0.0)
+    profit_dyn = np.cumsum(gains_dyn - mises_dyn)
+
+    # Tri entre les versions de "Base" et les versions "Optimisé" (via Hyperparamètres)
+    if "Optimisé" in name or "optimisé" in name:
+        target_dict = profits_modeles_opti
+    else:
+        target_dict = profits_modeles_base
+
+    target_dict["Seuil 0.5"][name] = profit_05
+    target_dict["Seuil Optimal Fixe"][name] = profit_opti
+    target_dict["Seuil Optimal + Dyn"][name] = profit_dyn
+
+# %%  VISUALISATION 1 : MODÈLES DE BASE 
+fig1, axs1 = plt.subplots(1, 3, figsize=(22, 7), sharey=True)
+fig1.suptitle("PROFITS CUMULÉS — GAMME MODÈLES DE BASE", fontsize=16, fontweight="bold")
+
+for ax, (nom_strat, liste_modeles) in zip(axs1, profits_modeles_base.items()):
+    ax.axhline(y=0, color="black", linestyle="-", alpha=0.4)
+    for nom_mod, profit_serie in liste_modeles.items():
+        is_bl = nom_mod.startswith("Baseline")
+        style = {"linestyle": "--", "linewidth": 2.0, "color": "red"} if is_bl else {"linewidth": 1.5}
+        ax.plot(index_matchs, profit_serie, label=f"{nom_mod} ({profit_serie[-1]:.1f}€)", **style)
+
+    ax.set_title(nom_strat, fontsize=12, fontweight="bold")
+    ax.set_xlabel("Matchs (Chronologique)")
+    ax.grid(True, linestyle=":", alpha=0.6)
+    ax.legend(loc="lower left", fontsize=9)
+
+axs1[0].set_ylabel("Profit Net Cumulé (€)", fontsize=12)
+plt.tight_layout()
+plt.show()
+
+# %%  VISUALISATION 2 : MODÈLES OPTIMISÉS 
+fig2, axs2 = plt.subplots(1, 3, figsize=(22, 7), sharey=True)
+fig2.suptitle("PROFITS CUMULÉS — GAMME MODÈLES OPTIMISÉS (RANDOM SEARCH)", fontsize=16, fontweight="bold")
+
+for ax, (nom_strat, liste_modeles) in zip(axs2, profits_modeles_opti.items()):
+    ax.axhline(y=0, color="black", linestyle="-", alpha=0.4)
+    for nom_mod, profit_serie in liste_modeles.items():
+        is_bl = nom_mod.startswith("Baseline")
+        style = {"linestyle": "--", "linewidth": 2.0, "color": "red"} if is_bl else {"linewidth": 1.5}
+        ax.plot(index_matchs, profit_serie, label=f"{nom_mod} ({profit_serie[-1]:.1f}€)", **style)
+
+    ax.set_title(nom_strat, fontsize=12, fontweight="bold")
+    ax.set_xlabel("Matchs (Chronologique)")
+    ax.grid(True, linestyle=":", alpha=0.6)
+    ax.legend(loc="lower left", fontsize=9)
+
+axs2[0].set_ylabel("Profit Net Cumulé (€)", fontsize=12)
 plt.tight_layout()
 plt.show()
 

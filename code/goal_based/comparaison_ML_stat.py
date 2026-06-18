@@ -1,4 +1,6 @@
 # %%
+# comparaison des ML et Stat ( Poisson )
+
 import os
 import sys
 import joblib
@@ -68,7 +70,22 @@ X_test_brut_nn = df_test[conf.ft_nn]
 # CHARGEMENT DES MODÈLES
 
 def load_models(models_dir=MODELS_DIR):
-    """charge les modèles ML entrainé dans modele_et_commparaison.py"""
+    """Charge les modèles entraînés depuis le répertoire de sérialisation.
+
+    Le chargement s'appuie sur la configuration globale `MODELS_CONFIG`, qui
+    associe à chaque nom logique de modèle le nom du fichier `.pkl` à lire et
+    le seuil optimal associé.
+
+    Args:
+        models_dir (str): Répertoire contenant les fichiers `.pkl` sauvegardés.
+
+    Returns:
+        dict[str, tuple[object, float]]: Dictionnaire associant le nom du modèle
+        à un couple `(modele_charge, seuil_optimal)`.
+
+    Raises:
+        FileNotFoundError: Si aucun modèle n'est trouvé dans `models_dir`.
+    """
     trained = {}
     for nom, cfg in MODELS_CONFIG.items():
         nom_fichier, seuil_opt = cfg
@@ -88,7 +105,19 @@ modeles_ml = load_models(MODELS_DIR)
 
 
 def get_X_test(model):
-    """pour prendre le bon jeu de test. Le scaler n'est pas le même pour le mlp et les autres"""
+    """Retourne la matrice de test adaptée au type de modèle.
+
+    Les modèles MLP ont été entraînés sur les variables `ft_nn`, avec un
+    prétraitement différent du reste des modèles. Cette fonction permet de
+    sélectionner automatiquement le bon jeu de variables au moment de la
+    prédiction.
+
+    Args:
+        model (str): Nom logique du modèle tel qu'utilisé dans `MODELS_CONFIG`.
+
+    Returns:
+        pandas.DataFrame: Jeu de test correspondant au modèle demandé.
+    """
     if model.startswith("MLP"):
         return X_test_brut_nn
     return X_test_brut_commune
@@ -98,6 +127,25 @@ def get_X_test(model):
 # MODÈLES STATISTIQUES : DIXON-COLES (BASE & TEMPOREL)
 
 def build_dixon_coles_lambdas(df_full, k=K_SMOOTHING):
+    """Construit les moyennes attendues de buts domicile/extérieur.
+
+    Cette fonction parcourt le championnat dans l'ordre chronologique et
+    calcule, pour chaque rencontre, deux paramètres de Poisson :
+    - `mu` pour les buts attendus de l'équipe à domicile ;
+    - `nu` pour les buts attendus de l'équipe à l'extérieur.
+
+    Le calcul repose sur un lissage bayésien contrôlé par `k`, afin d'éviter
+    des estimations trop instables en début de saison.
+
+    Args:
+        df_full (pandas.DataFrame): Données complètes contenant au minimum les
+            colonnes `HomeTeam`, `AwayTeam`, `FTHG` et `FTAG`.
+        k (int): Paramètre de lissage bayésien.
+
+    Returns:
+        tuple[list[float], list[float]]: Deux listes de longueurs identiques,
+        contenant respectivement `mu` et `nu` pour chaque match.
+    """
     toutes_equipes = set(df_full["HomeTeam"].unique()) | set(df_full["AwayTeam"].unique())
     goals_m_dom = {t: 0 for t in toutes_equipes}
     goals_e_dom = {t: 0 for t in toutes_equipes}
@@ -143,7 +191,21 @@ def build_dixon_coles_lambdas(df_full, k=K_SMOOTHING):
 
 
 def tau(x, y, mu, nu, rho):
-    """fonction de Dixon-Coles pour gerer petit score"""
+    """Applique le facteur de correction Dixon-Coles sur les petits scores.
+
+    Le terme `tau` ajuste la probabilité jointe des scores faibles
+    (0-0, 0-1, 1-0, 1-1) afin de mieux modéliser la dépendance entre les buts.
+
+    Args:
+        x (int): Buts marqués par l'équipe à domicile.
+        y (int): Buts marqués par l'équipe à l'extérieur.
+        mu (float): Intensité Poisson pour l'équipe à domicile.
+        nu (float): Intensité Poisson pour l'équipe à l'extérieur.
+        rho (float): Paramètre de corrélation Dixon-Coles.
+
+    Returns:
+        float: Facteur multiplicatif de correction.
+    """
     if x == 0 and y == 0: return 1 - mu * nu * rho
     if x == 0 and y == 1: return 1 + mu * rho
     if x == 1 and y == 0: return 1 + nu * rho
@@ -152,7 +214,24 @@ def tau(x, y, mu, nu, rho):
 
 
 def neg_log_L_base(params, mu, nu, x, y):
-    """log vraisemblance du papier de Dixon-Coles"""
+    """Calcule la log-vraisemblance négative du modèle Dixon-Coles de base.
+
+    La fonction est utilisée comme fonction objectif lors de l'optimisation de
+    `rho` uniquement.
+
+    Args:
+        params (array-like): Vecteur de paramètres, contenant ici uniquement
+            `rho`.
+        mu (array-like): Intensités attendues des buts domicile.
+        nu (array-like): Intensités attendues des buts extérieur.
+        x (array-like): Buts réellement marqués par l'équipe à domicile.
+        y (array-like): Buts réellement marqués par l'équipe à l'extérieur.
+
+    Returns:
+        float: Valeur de la log-vraisemblance négative. Une grande pénalité est
+        renvoyée si le paramètre sort du domaine valide ou si un facteur `tau`
+        devient non positif.
+    """
     rho = params[0]
     if abs(rho) > 1:
         return 1e6
@@ -163,6 +242,25 @@ def neg_log_L_base(params, mu, nu, x, y):
 
 
 def neg_log_L_temporal(params, mu, nu, y_home, y_away, t_array):
+    """Calcule la log-vraisemblance négative du Dixon-Coles temporel.
+
+    Cette version ajoute un facteur d'oubli temporel `exp(-t * xi)` afin de
+    donner plus de poids aux matchs récents. Elle optimise deux paramètres :
+    `rho` pour la correction Dixon-Coles et `xi` pour la décroissance temporelle.
+
+    Args:
+        params (array-like): Vecteur `[rho, xi]`.
+        mu (array-like): Intensités attendues des buts domicile.
+        nu (array-like): Intensités attendues des buts extérieur.
+        y_home (array-like): Buts domicile observés.
+        y_away (array-like): Buts extérieur observés.
+        t_array (array-like): Âge relatif des matchs, plus grand pour les
+            rencontres anciennes.
+
+    Returns:
+        float: Valeur de l'objectif à minimiser, avec pénalité si `xi` est
+        négatif, si `tau` devient non positif ou si la somme n'est pas finie.
+    """
     rho, xi = params
     penalite = 0.0
     if xi < 0:
@@ -245,6 +343,31 @@ dict_y_pred_binaires = {}
 
 
 def simuler_value_bet(probs_pred, cotes, y_true, nom_modele, critere_decision=None, est_ml=True, mise=MISE):
+    """Simule une stratégie de pari value bet et mémorise les résultats.
+
+    Pour un modèle de machine learning, un pari est placé si la probabilité
+    prédite dépasse `critere_decision`. Pour les modèles statistiques, la règle
+    value bet compare la probabilité prédite à la probabilité implicite du
+    bookmaker.
+
+    La fonction met aussi à jour les dictionnaires globaux de suivi des profits
+    et du nombre de paris.
+
+    Args:
+        probs_pred (array-like): Probabilités prédites pour la victoire à
+            domicile.
+        cotes (array-like): Cotes correspondantes du marché.
+        y_true (array-like): Labels réels binaires.
+        nom_modele (str): Nom du modèle utilisé comme clé dans les dictionnaires
+            de suivi.
+        critere_decision (float | None): Seuil de décision pour les modèles ML.
+        est_ml (bool): Indique si le modèle suit une logique de seuil fixe ML.
+        mise (float): Mise unitaire par pari.
+
+    Returns:
+        dict[str, float | int]: Résumé contenant le modèle, la mise totale, le
+        profit net et le ROI.
+    """
     prob_bk = 1.0 / cotes
     mask = (probs_pred >= critere_decision) if est_ml else (probs_pred > prob_bk)
 
@@ -270,6 +393,24 @@ def simuler_value_bet(probs_pred, cotes, y_true, nom_modele, critere_decision=No
 
 
 def compute_roi_par_modele(y_test, probas, cotes, seuil_optimal):
+    """Calcule le ROI d'une stratégie dynamique par paliers de mise.
+
+    La stratégie ne mise que lorsque le modèle identifie une value bet
+    (`proba > proba_bookmaker`). Les mises sont ensuite modulées selon le
+    niveau de confiance autour du seuil optimal :
+    - 10€ si la probabilité est juste au-dessus du seuil optimal ;
+    - 30€ si elle dépasse le seuil optimal de plus de 0.10.
+
+    Args:
+        y_test (array-like): Labels réels binaires.
+        probas (array-like): Probabilités prédites pour la classe positive.
+        cotes (array-like): Cotes correspondantes.
+        seuil_optimal (float): Seuil de décision servant de base aux paliers.
+
+    Returns:
+        tuple[float, int, float]: ROI en pourcentage, mise totale engagée et
+        profit net.
+    """
     y_t = np.array(y_test)
     c = np.array(cotes)
     p = np.array(probas)
@@ -407,7 +548,7 @@ for nom, (probas, seuil, est_ml) in specs.items():
     if est_ml:
         mask_05 = (probas >= 0.50)
     else:
-        mask_05 = (probas > (1.0 / cotes_test))  # VB pour Dixon/Baseline
+        mask_05 = (probas > (1.0 / cotes_test))
     gains_05 = np.where(mask_05 & (y_test == 1), MISE * cotes_test, 0.0)
     profits_05 = gains_05 - np.where(mask_05, MISE, 0.0)
     dict_profits_strat[(nom, "seuil05")] = np.cumsum(profits_05)
@@ -560,8 +701,6 @@ ax2.grid(True, axis='y', linestyle=':', alpha=0.5)
 # Légende unique globale positionnée au centre en bas
 ax1.legend(loc='lower left', ncols=3, fontsize=10, frameon=True)
 
-# Sauvegarde propre du graphique
-plt.savefig("comparatif_roi_structures.png", dpi=300, bbox_inches='tight')
 plt.show()
 
 # %%=========================================================================
@@ -693,5 +832,78 @@ if p_value < 0.05:
     plt.show()
 else:
     print("\nLa p-value du test de Friedman est supérieure à 0.05 pour le Brier Score.")
+
+# %%=========================================================================
+#  MATRICES DE CONFUSION
+# =========================================================================
+from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
+
+# Nombre de modèles à afficher (on exclut la Baseline qui n'a pas de sens économique)
+modeles_a_afficher = [nom for nom in specs.keys() if nom != "Baseline (Toujours 1)"]
+
+# Configuration de la grille de subplots (4 lignes, 4 colonnes pour accueillir les 14 modèles)
+n_modeles = len(modeles_a_afficher)
+n_cols = 4
+n_rows = (n_modeles + n_cols - 1) // n_cols
+
+fig, axes = plt.subplots(n_rows, n_cols, figsize=(20, 4 * n_rows))
+axes = axes.flatten()  # Aplatir la matrice d'axes pour itérer facilement
+
+print("\n" + "=" * 60)
+print("           MATRICES DE CONFUSION (SEUILS OPTIMAUX / VB)")
+print("=" * 60)
+
+for i, nom in enumerate(modeles_a_afficher):
+    probas, seuil, est_ml = specs[nom]
+    ax = axes[i]
+
+    # Détermination des prédictions binaires selon la stratégie du modèle
+    if est_ml and seuil is not None:
+        y_pred = (probas >= seuil).astype(int)
+        titre_seuil = f"Seuil: {seuil}"
+    else:
+        # Pour Dixon-Coles, la règle est le Value Bet (proba > proba_bookmaker)
+        prob_bk = 1.0 / cotes_test
+        y_pred = (probas > prob_bk).astype(int)
+        titre_seuil = "Stratégie Value Bet"
+
+    # Calcul de la matrice de confusion
+    cm = confusion_matrix(y_test, y_pred)
+
+    # Affichage textuel dans la console
+    print(f"\nModèle : {nom} ({titre_seuil})")
+    print(f"Vrais Négatifs (Pas de pari/Autre issue) : {cm[0, 0]} | Faux Positifs (Pari perdant) : {cm[0, 1]}")
+    print(f"Faux Négatifs (Pari raté)                 : {cm[1, 0]} | Vrais Positifs (Pari gagnant) : {cm[1, 1]}")
+
+    # Construction graphique du subplot
+    # Raccourcir le nom pour l'affichage graphique
+    nom_court = nom.replace(" (Optimisé)", " (Opti)").replace(" (Base)", "").replace(" (base)", "")
+
+    disp = ConfusionMatrixDisplay(
+        confusion_matrix=cm,
+        display_labels=["Autre/Non", "Victoire Dom."]
+    )
+
+    # Personnalisation visuelle (couleur bleue pour correspondre à tes graphiques de ROI)
+    disp.plot(
+        ax=ax,
+        cmap=plt.cm.Blues,
+        values_format='d',
+        colorbar=False
+    )
+
+    ax.set_title(f"{nom_court}\n{titre_seuil}", fontsize=10, fontweight='bold')
+    ax.set_xlabel('Prédictions', fontsize=8)
+    ax.set_ylabel('Réalité', fontsize=8)
+
+# Masquer les axes vides si le nombre de modèles ne remplit pas parfaitement la grille
+for j in range(i + 1, len(axes)):
+    fig.delaxes(axes[j])
+
+print("\n" + "=" * 60)
+
+plt.suptitle("Matrices de Confusion sur le Jeu de Test", fontsize=16, fontweight='bold', y=0.99)
+plt.tight_layout()
+plt.show()
 
 # %%
