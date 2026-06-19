@@ -5,7 +5,7 @@ import scikit_posthocs as sp
 import matplotlib.pyplot as plt
 
 df = pd.read_csv('../data/csv/foot_process.csv', low_memory=False)
-
+# Cartographie des colonnes de cotes pour chaque bookmaker (H: Home, D: Draw, A: Away)
 books_config = {
     'B365': {'H': 'B365H', 'D': 'B365D', 'A': 'B365A'},
     'Bwin': {'H': 'BWH', 'D': 'BWD', 'A': 'BWA'},
@@ -13,9 +13,9 @@ books_config = {
     'Pinnacle_Closing': {'H': 'PSCH', 'D': 'PSCD', 'A': 'PSCA'},
     'BetVictor': {'H': 'VCH', 'D': 'VCD', 'A': 'VCA'}
 }
-
 all_bet_cols = [col for b in books_config.values() for col in b.values()]
 
+# garder que les colonnes cibles et les descripteurs clés
 df_clean = df[all_bet_cols + ['FTR', 'Season', 'League']].copy()
 
 for col in all_bet_cols:
@@ -30,6 +30,26 @@ print(f"Ligues détectées : {df_clean['League'].unique()}")
 
 
 def calculate_home_vs_rest_log_loss(row, book_cols):
+    """
+        Calcule la Log-Loss binaire pour le résultat "Victoire à domicile (H)" vs "Reste (D ou A)"
+        en normalisant les cotes pour supprimer la marge commerciale (overround).
+
+        La méthode de normalisation utilise l'approche basique (proportionnelle) :
+        P_ajustée = P_brute / Somme(P_brutes).
+
+        Parameters:
+        -----------
+        row : pd.Series
+            Une ligne du DataFrame contenant les cotes et le résultat final ('FTR').
+        book_cols : dict
+            Dictionnaire contenant les clés 'H', 'D', 'A' associées aux noms des colonnes du bookmaker.
+
+        Returns:
+        --------
+        float
+            La valeur de la perte logarithmique (Log-Loss). Plus elle est proche de 0,
+            plus la prédiction du bookmaker était précise.
+        """
     p_h_raw = 1 / row[book_cols['H']]
     p_d_raw = 1 / row[book_cols['D']]
     p_a_raw = 1 / row[book_cols['A']]
@@ -65,6 +85,8 @@ print(scores_df.head(15).round(4))
 print(f"... ({len(scores_df)} blocs d'observations au total) ...")
 print("-" * 65)
 
+# Test de Friedman : Test non-paramétrique pour comparer les performances globales
+# Hypothèse Nulle (H0) : Tous les bookmakers ont des performances équivalentes.
 stat, p_value = stats.friedmanchisquare(*[scores_df[c] for c in scores_df.columns])
 print(f"Statistique de Friedman : {stat:.3f}, P-value : {p_value:.5f}")
 
@@ -73,6 +95,7 @@ if p_value < 0.05:
     print("\nRanking moyen des bookmakers (Plus bas = Meilleur) :")
     print(ranks.sort_values().round(3))
 
+    # Test Post-Hoc de Nemenyi : Comparaison par paire des rangs des bookmakers
     p_matrix = sp.posthoc_nemenyi_friedman(scores_df)
 
     fig, ax = plt.subplots(figsize=(10, 4))
