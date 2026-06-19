@@ -11,7 +11,6 @@ from sklearn.feature_selection import RFECV, SelectKBest, f_classif, mutual_info
 from sklearn.linear_model import LogisticRegression
 from sklearn.neural_network import MLPClassifier
 from sklearn.metrics import classification_report, f1_score
-from copy import deepcopy
 
 # %%
 df = pd.read_csv(conf.path_clean_cell)
@@ -127,6 +126,54 @@ y_val = y_train_full.iloc[val_split:]
 
 
 def get_ecd_saliency(nn, X, y):
+    """
+        Calcule la matrice de saillance (saliency) des variables d'entrée d'un MLP
+        via l'approche ECD (Early Cell Damage / Early Brain Damage).
+
+        Cette méthode est une extension au second ordre d'Optimal Cell Damage (OCD).
+        Contrairement à OCD/OBD qui supposent un gradient nul (convergence parfaite),
+        ECD prend en compte le gradient actuel, ce qui permet d'estimer la pertinence
+        des caractéristiques (features) même si le modèle n'a pas atteint un minimum local.
+
+        Le calcul estime l'impact sur la fonction de coût (Log-Loss) de la mise à zéro
+        simultanée des poids connectés à une entrée en utilisant un développement de
+        Taylor au second ordre.
+
+        Parameters
+        ----------
+        nn : sklearn.neural_network.MLPClassifier
+            Le modèle de réseau de neurones (Perceptron Multicouche) entraîné ou en cours
+            d'entraînement. Doit posséder l'attribut `coefs_`.
+        X : array-like of shape (n_samples, n_features)
+            La matrice des données d'entrée (caractéristiques).
+        y : array-like of shape (n_samples,)
+            Les étiquettes de classes réelles associées aux données d'entrée.
+
+        Returns
+        -------
+        numpy.ndarray of shape (n_features,)
+            Un vecteur contenant le score de saillance (saliency) pour chaque variable.
+            Une valeur plus élevée indique une variable plus importante pour les prédictions
+            du réseau.
+
+        Notes
+        -----
+        L'approximation des dérivées partielles premières (gradient $g_0$) et secondes
+        (Hessien diagonal $h_0$) est réalisée par la méthode des différences finies centrées
+        autour des poids de la première couche cachée ($W_0$).
+
+        La formule de saillance pour une connexion $W_{i,j}$ est définie par :
+        $$S_{i,j} = \frac{1}{2} h_0 W_0^2 - g_0 W_0 + \frac{1}{2} \frac{g_0^2}{h_0}$$
+
+        La saillance globale de la variable d'entrée $i$ correspond à la somme des saillances
+        de toutes ses connexions sortantes (*fan-out*).
+
+        References
+        ----------
+        .. [1] Leray, P., & Gallinari, P. (1998). "Feature Selection with Neural Networks".
+               Research Report LIP6. (Section 5.3.2 - Optimal Cell Damage & Équations ECD).
+        .. [2] Hermann, G. (1997). "Early Brain Damage". Neural Information Processing Systems.
+        """
     W0 = nn.coefs_[0]  # Poids de la première couche (n_features, n_hidden)
     g0 = np.zeros_like(W0)
     h0 = np.zeros_like(W0)
@@ -280,4 +327,3 @@ print(classification_report(y_test, y_pred_test))
 features_communes_4 = set(features_communes) & set(features_ecd)
 print("\n---  Communes aux 4 méthodes ---")
 print(f"Total ({len(features_communes_4)}) : {sorted(features_communes_4)}")
-
