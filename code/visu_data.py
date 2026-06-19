@@ -1,3 +1,37 @@
+"""
+=============================================================================
+VISUALISATION EXPLORATOIRE DES DONNÉES (EDA)
+=============================================================================
+Script d'exploration visuelle des données de football via réduction de
+dimensionnalité et analyses multivariées.
+
+Méthodes de réduction
+---------------------
+- UMAP (Uniform Manifold Approximation and Projection) : préserve la structure
+  locale et globale en 2D et 3D. Très efficace pour découvrir les clusters.
+
+- PCA (Principal Component Analysis) : projection linéaire optimalisant la
+  variance expliquée. Interprétabilité plus claire que UMAP.
+
+Analyses
+--------
+1. UMAP 2D / 3D : Visualisation non-linéaire des séparations 1X2.
+2. PCA 2D / 3D : Analyse linéaire + variance par composante.
+3. Variance cumulée : Nombre de composantes PCA nécessaires pour 95% variance.
+4. Biplot PCA : Projection des observations + contributions des variables.
+5. Boxplot : Distributions univariées par classe cible (Hvs).
+
+Target
+------
+FTR : 0=Draw, 1=Home, 2=Away (multinomial)
+Hvs : 0=Not Home Win, 1=Home Win (binaire)
+
+Palette de couleurs : seaborn.color_palette()
+  - Indice 0 (bleu) : Draw / Not Home
+  - Indice 1 (orange) : Home Win
+  - Indice 2 (vert) : Away
+"""
+
 import sys
 import os
 
@@ -15,92 +49,129 @@ import matplotlib
 matplotlib.use('qtagg')
 print("Import")
 
-# %%
-df = pd.read_csv(conf.path_clean_cell)
-reducer = umap.UMAP(random_state=42)
-feat = conf.ECD
-X = df[feat].values
-y = df['FTR']
-print("Data loading ")
+# %%=============================================================================
+# CHARGEMENT ET PRÉPARATION DES DONNÉES
+# =============================================================================
+# Récupération des données nettoyées et sélection des features via config.
 
-# %% umap 2D
+df = pd.read_csv(conf.path_clean_cell)
+feat = conf.ECD  # Features sélectionnées (config.py)
+X = df[feat].values  # Matrice d'observations (n_samples, n_features)
+y = df['FTR']  # Cible multinominale (0, 1, 2)
+
+# Normalisation : centrage et réduction à variance unitaire
+# Essentielle pour UMAP et PCA
 scaled = StandardScaler().fit_transform(X)
 
-embedding = reducer.fit_transform(scaled)
-embedding.shape
+print(f" Données chargées : {X.shape[0]} matchs, {X.shape[1]} features")
 
+# %%=============================================================================
+# VISUALISATION 1 : UMAP 2D
+# =============================================================================
+# UMAP : réduction non-linéaire préservant structures locales et globales.
+# Paramètres par défaut :
+#   - n_neighbors=15 : rayon du voisinage local
+#   - min_dist=0.1 : distance minimale entre points projetés
+#   - metric='euclidean' : distance source
+
+reducer = umap.UMAP(random_state=42)
+embedding = reducer.fit_transform(scaled)
+
+# Palette de couleurs et mapping labels
 palette = sns.color_palette()
 label_map = {0: "Draw", 1: "Home", 2: "Away"}
 
+# Projection 2D colorée par classe
+plt.figure(figsize=(10, 8))
 plt.scatter(
     embedding[:, 0],
     embedding[:, 1],
-    c=[palette[x] for x in df.FTR])
+    c=[palette[int(x)] for x in df.FTR],
+    alpha=0.6,
+    s=10,
+    edgecolors='none')
 
 from matplotlib.patches import Patch
-
 legend_elements = [Patch(facecolor=palette[k], label=v) for k, v in label_map.items()]
-plt.legend(handles=legend_elements)
+plt.legend(handles=legend_elements, fontsize=10)
 
 plt.gca().set_aspect('equal', 'datalim')
-plt.title('UMAP projection', fontsize=24)
+plt.xlabel('UMAP 1', fontsize=10)
+plt.ylabel('UMAP 2', fontsize=10)
+plt.title('UMAP 2D Projection (séparation 1X2)', fontsize=14, fontweight='bold')
+plt.grid(True, alpha=0.3)
+plt.tight_layout()
 plt.show()
 
-print("plot umap 2D")
+print(" UMAP 2D ")
 
-# %% umap 3D
+# %%=============================================================================
+# VISUALISATION 2 : UMAP 3D
+# =============================================================================
+# UMAP en 3 dimensions pour explorer la séparation spatiale des classes.
+# Permet de pivoter/zoomer interactivement (avec QT5).
+
 reducer_3d = umap.UMAP(n_components=3, n_neighbors=15, min_dist=0.1, random_state=42)
-
 embedding_3d = reducer_3d.fit_transform(scaled)
 
 fig = plt.figure(figsize=(12, 8))
 ax = fig.add_subplot(111, projection='3d')
 
 colors = [palette[int(x)] for x in df.FTR]
-scatter = ax.scatter(
+ax.scatter(
     embedding_3d[:, 0],
     embedding_3d[:, 1],
     embedding_3d[:, 2],
     c=colors,
     s=10,
-    alpha=0.6
-)
+    alpha=0.6,
+    edgecolors='none')
 
-legend_elements_pca3d = [Patch(facecolor=palette[k], label=v) for k, v in label_map.items()]
-ax.legend(handles=legend_elements_pca3d)
+legend_elements_3d = [Patch(facecolor=palette[k], label=v) for k, v in label_map.items()]
+ax.legend(handles=legend_elements_3d)
 
-ax.set_title('UMAP Projection 3D (Interactif)', fontsize=20)
 ax.set_xlabel('UMAP 1')
 ax.set_ylabel('UMAP 2')
 ax.set_zlabel('UMAP 3')
-
+ax.set_title('UMAP 3D Projection (interactif)', fontsize=14, fontweight='bold')
+plt.tight_layout()
 plt.show()
 
 print("Plot 3D affiché")
 
-# %% ACP 2D
+# %%=============================================================================
+# VISUALISATION 3 : PCA 2D
+# =============================================================================
+# PCA : réduction linéaire via diagonalisation de la matrice de covariance.
+# Dimension 1 & 2 capturent le plus de variance possible dans le sous-espace.
+
 pca = PCA(n_components=2, random_state=42)
 embedding_pca = pca.fit_transform(scaled)
 
-plt.figure(figsize=(10, 7))
+plt.figure(figsize=(10, 8))
 plt.scatter(
     embedding_pca[:, 0],
     embedding_pca[:, 1],
-    c=[palette[x] for x in df.FTR],
+    c=[palette[int(x)] for x in df.FTR],
     alpha=0.6,
-    s=10
-)
+    s=10,
+    edgecolors='none')
 
 legend_elements_pca = [Patch(facecolor=palette[k], label=v) for k, v in label_map.items()]
-plt.legend(handles=legend_elements_pca)
+plt.legend(handles=legend_elements_pca, fontsize=10)
 
-plt.xlabel(f'PC1 ({pca.explained_variance_ratio_[0] * 100:.1f}%)')
-plt.ylabel(f'PC2 ({pca.explained_variance_ratio_[1] * 100:.1f}%)')
-plt.title('ACP projection', fontsize=24)
+var_pca1 = pca.explained_variance_ratio_[0] * 100
+var_pca2 = pca.explained_variance_ratio_[1] * 100
+
+plt.xlabel(f'PC1 ({var_pca1:.1f}%)', fontsize=10)
+plt.ylabel(f'PC2 ({var_pca2:.1f}%)', fontsize=10)
+plt.title('PCA 2D Projection', fontsize=14, fontweight='bold')
 plt.gca().set_aspect('equal', 'datalim')
-plt.legend()
+plt.grid(True, alpha=0.3)
+plt.tight_layout()
 plt.show()
-print("Plot ACP 2D affiché")
+
+print(f" ACP 2D affiché (variance cumulée : {(var_pca1 + var_pca2):.1f}%)")
 
 # %% ACP 3D
 pca_3d = PCA(n_components=3, random_state=42)
@@ -218,7 +289,8 @@ for i, col in enumerate(feat):
             plt.xlabel("1=Dom, 0=Nul, 2=Ext")
         else:
             plt.xlabel("Résultat (0=Perdu/Nul, 1=Gagné)")
-    # plt.ylabel("Valeur")
 plt.suptitle(f"target : {t}", y=0.999)
 plt.tight_layout()
 plt.show()
+
+# %%
