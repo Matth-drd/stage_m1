@@ -7,10 +7,10 @@ import matplotlib.pyplot as plt
 df = pd.read_csv('../data/csv/foot_process.csv', low_memory=False)
 # Cartographie des colonnes de cotes pour chaque bookmaker (H: Home, D: Draw, A: Away)
 books_config = {
-    'B365': {'H': 'B365H', 'D': 'B365D', 'A': 'B365A'},
-    'Bwin': {'H': 'BWH', 'D': 'BWD', 'A': 'BWA'},
+    'Bet365': {'H': 'B365H', 'D': 'B365D', 'A': 'B365A'},
+    'Betwin': {'H': 'BWH', 'D': 'BWD', 'A': 'BWA'},
     'Pinnacle': {'H': 'PSH', 'D': 'PSD', 'A': 'PSA'},
-    'Pinnacle_Closing': {'H': 'PSCH', 'D': 'PSCD', 'A': 'PSCA'},
+    'William Hill': {'H': 'WHH', 'D': 'WHD', 'A': 'WHA'},
     'BetVictor': {'H': 'VCH', 'D': 'VCD', 'A': 'VCA'}
 }
 all_bet_cols = [col for b in books_config.values() for col in b.values()]
