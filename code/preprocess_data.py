@@ -22,25 +22,35 @@ df = df.sort_values(by='Date').reset_index(drop=True)
 ################## HOME
 
 """
-plus Tdef est faible plus l'équipe T a une défense solide.
+Logique du calcul glissant (rolling) :
+- groupby('Team') : isole l'historique de chaque équipe.
+- rolling(nb_match, closed='left') : calcule la moyenne sur les N matchs précédents, 
+  en EXCLUANT le match en cours (closed='left') pour éviter la fuite de données (data leakage).
+- min_periods=1 : permet de calculer une moyenne dès le 2e match (si 1 seul match disponible).
+- plus Tdef est faible, plus l'équipe T a une défense solide (moins de buts concédés).
 Apparition de Nan dans les colonnes créées. Je traite cela à la fin du code.
 Les Nan apparaissent pour le 1er match de chaque équipe car les calculs sont effectués
 sur les matchs précédents en excluant le match en cours.
 """
 
+# Forme (Moyenne des buts marqués lors des N derniers matchs respectifs H ou A)
 df["FT_Hforme"] = df.groupby('HomeTeam')['FTHG'].rolling(nb_match, min_periods=1, closed='left').mean().reset_index(
     level=0, drop=True)
 df["FT_Aforme"] = df.groupby('AwayTeam')['FTAG'].rolling(nb_match, min_periods=1, closed='left').mean().reset_index(
     level=0, drop=True)
 
-df["FT_Hatt"] = df.groupby('HomeTeam')['HS'].rolling(nb_match, min_periods=1, closed='left').mean().reset_index(
-    level=0, drop=True)
-df["FT_Aatt"] = df.groupby('AwayTeam')['AS'].rolling(nb_match, min_periods=1, closed='left').mean().reset_index(
-    level=0, drop=True)
+# Attaque (Moyenne des tirs tentés HS = Home Shots, AS = Away Shots)
+df["FT_Hatt"] = df.groupby('HomeTeam')['HS'].rolling(nb_match, min_periods=1, closed='left').mean().reset_index(level=0,
+                                                                                                                drop=True)
+df["FT_Aatt"] = df.groupby('AwayTeam')['AS'].rolling(nb_match, min_periods=1, closed='left').mean().reset_index(level=0,
+                                                                                                                drop=True)
+
+# Défense (Moyenne des buts concédés : buts marqués par l'adversaire lors des matchs précédents)
 df["FT_Hdef"] = df.groupby('HomeTeam')['FTAG'].rolling(nb_match, min_periods=1, closed='left').mean().reset_index(
     level=0, drop=True)
 df["FT_Adef"] = df.groupby('AwayTeam')['FTHG'].rolling(nb_match, min_periods=1, closed='left').mean().reset_index(
     level=0, drop=True)
+
 print(df.head())
 print("FT features calculées  ")
 # ==================
@@ -147,8 +157,11 @@ print("Précision FT calculée  ")
 # SCORE ELO — FULL TIME
 """
 elo_init = 1500
-Rappel sur FTR : Domicile=1, Extérieur=2, Nul=0.
 https://www.eloratings.net/about
+Calcul du score ELO dynamique par match selon les règles officielles (gérées itérativement).
+- +100 points fictifs appliqués à domicile pour matérialiser l'avantage terrain (Home Advantage).
+- Facteur multiplicateur G ajusté selon la marge / l'écart de buts pour l'historique de performance.
+- FTR : 1 = Victoire Dom, 2 = Victoire Ext, 0 = Nul.
 """
 
 elo_teams = {team: 1500 for team in all_teams}
@@ -280,9 +293,9 @@ betting = [
     'VCH', 'VCD', 'VCA', 'PSCH', 'PSCD', 'PSCA', 'B365H', 'B365D', 'B365A']
 # création de colonnes proba associé au cotes.
 for c in betting:
-    df[f"{c}_prob"] = 1/df[f"{c}"]
-print("\n proba \n",df.info())
-print("="*5)
+    df[f"{c}_prob"] = 1 / df[f"{c}"]
+print("\n proba \n", df.info())
+print("=" * 5)
 prefixes = ['B365', 'BW', 'PS', 'WH', 'VC', 'PSC']
 
 for p in prefixes:
@@ -320,6 +333,20 @@ print("Ratio")
 
 
 def streaks(df):
+    """
+        Calcule dynamiquement et de manière séquentielle les séries de victoires
+        et de défaites consécutives (Streaks) pour chaque équipe avant le match.
+
+        Parameters:
+        -----------
+        df : pd.DataFrame
+            Le DataFrame des matchs trié par ordre chronologique.
+
+        Returns:
+        --------
+        tuple de listes (h_win, a_win, h_lose, a_lose)
+            Les historiques des séries au moment du coup d'envoi pour chaque match.
+        """
     all_teams = pd.unique(df[['HomeTeam', 'AwayTeam']].values.ravel())
     win_count = {team: 0 for team in all_teams}
     lose_count = {team: 0 for team in all_teams}
@@ -375,18 +402,16 @@ print(df.columns)
 # ==================================
 # Classement des équipes RANK
 # ==================================
-# 1. Calcul des points par match
+#  Calcul des points par match 3pts pour Win;  1 pour Draw; 2 pour défaite.
 df['pts_H'] = df['FTR'].map({1: 3, 0: 1, 2: 0})
 df['pts_A'] = df['FTR'].map({2: 3, 0: 1, 1: 0})
-# 2. Format long (on garde l'ordre : d'abord tous les Home, puis tous les Away)
 h = df[['Season', 'HomeTeam', 'pts_H']].rename(columns={'HomeTeam': 'Team', 'pts_H': 'pts'})
 a = df[['Season', 'AwayTeam', 'pts_A']].rename(columns={'AwayTeam': 'Team', 'pts_A': 'pts'})
 all_stats = pd.concat([h, a])
-# 3. Calcul du cumul par saison/équipe (on trie par date si besoin, mais ici l'ordre du DF suffit)
+#  Calcul du cumul par saison/équipe
 # On utilise groupby et shift pour avoir les points AVANT le match
 all_stats['rank_before'] = all_stats.groupby(['Season', 'Team'])['pts'].transform(
     lambda x: x.cumsum().shift(1, fill_value=0))
-# 4. Réinjection SANS erreur d'index (en utilisant .values)
 # On sépare la première moitié (Home) de la seconde moitié (Away)
 df['H_Rank'] = all_stats.iloc[:len(df)]['rank_before'].values
 df['A_Rank'] = all_stats.iloc[len(df):]['rank_before'].values
